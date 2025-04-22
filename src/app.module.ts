@@ -16,6 +16,7 @@ import { EmojyModule } from './emojy/emojy.module';
 import { MessageEmojiModule } from './message-emoji/message-emoji.module';
 import { NotificationChannelModule } from './notification-channel/notification-channel.module';
 import { NotificationWorkspaceModule } from './notification-workspace/notification-workspace.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NotificationWorkspaceModule } from './notification-workspace/notificati
     MessageEmojiModule,
     NotificationChannelModule,
     NotificationWorkspaceModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
