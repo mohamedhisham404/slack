@@ -7,7 +7,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Message } from 'src/message/entities/message.entity';
-import { WorkspaceUsers } from 'src/workspace-users/entities/workspace-user.entity';
+import { UserChannel } from 'src/channels/entities/user-channel.entity';
+import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 
 @Entity()
 export class User {
@@ -56,6 +57,9 @@ export class User {
   @OneToMany(() => Message, (message) => message.user)
   messages: Message[];
 
-  @OneToMany(() => WorkspaceUsers, (wu) => wu.user)
-  workspaceUsers: WorkspaceUsers[];
+  @OneToMany(() => UserChannel, (userChannel) => userChannel.user)
+  userChannels: UserChannel[];
+
+  @OneToMany(() => UserWorkspace, (userWorkspace) => userWorkspace.user)
+  userWorkspaces: UserWorkspace[];
 }

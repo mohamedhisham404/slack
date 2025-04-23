@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Channels } from 'src/channels/entities/channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { MessageReaction } from './message-reaction.entity';
 
 @Entity()
 export class Message {
@@ -52,4 +54,7 @@ export class Message {
 
   @Column({ type: 'timestamp', nullable: true })
   deleted_at: Date;
+
+  @OneToMany(() => MessageReaction, (reaction) => reaction.message)
+  reactions: MessageReaction[];
 }

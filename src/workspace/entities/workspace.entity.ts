@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Channels } from 'src/channels/entities/channel.entity';
+import { UserWorkspace } from './user-workspace.entity';
 
 @Entity()
 export class Workspace {
@@ -24,4 +25,7 @@ export class Workspace {
 
   @OneToMany(() => Channels, (channel) => channel.workspace)
   channels: Channels[];
+
+  @OneToMany(() => UserWorkspace, (userWorkspace) => userWorkspace.workspace)
+  userWorkspaces: UserWorkspace[];
 }

@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { User } from 'src/user/entities/user.entity';
+import { UserChannel } from './user-channel.entity';
 
 @Entity()
 export class Channels {
@@ -45,4 +47,10 @@ export class Channels {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at: Date;
+
+  @OneToMany(() => UserChannel, (userChannel) => userChannel.channel)
+  userChannels: UserChannel[];
 }
