@@ -14,6 +14,7 @@ import { CreateChannelsDto } from './dto/create-channel.dto';
 import { UpdateChannelsDto } from './dto/update-channel.dto';
 import { Request } from 'express';
 import { AuthGuard } from 'src/guards/auth.guards';
+import { AddUserDto } from './dto/add-user.dto';
 
 @UseGuards(AuthGuard)
 @Controller('channels')
@@ -26,6 +27,11 @@ export class ChannelsController {
     @Req() req: Request,
   ) {
     return this.channelsService.create(createChannelDto, req);
+  }
+
+  @Post('/add_user')
+  async addUser(@Body() addUser: AddUserDto, @Req() req: Request) {
+    return this.channelsService.addUser(addUser, req);
   }
 
   @Get()

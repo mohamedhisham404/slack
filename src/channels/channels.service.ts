@@ -7,6 +7,8 @@ import { Repository } from 'typeorm';
 import { Channels } from './entities/channel.entity';
 import { ChannelRole, UserChannel } from './entities/user-channel.entity';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
+import { AddUserDto } from './dto/add-user.dto';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class ChannelsService {
@@ -19,6 +21,9 @@ export class ChannelsService {
 
     @InjectRepository(UserChannel)
     private readonly userChannelRepo: Repository<UserChannel>,
+
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   async create(createChannelDto: CreateChannelsDto, req: Request) {
@@ -55,6 +60,68 @@ export class ChannelsService {
       await this.userChannelRepo.save(userChannel);
 
       return savedChannel;
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'message' in error) {
+        throw new BadRequestException((error as { message: string }).message);
+      }
+
+      throw new BadRequestException('Failed to add user');
+    }
+  }
+
+  async addUser(addUser: AddUserDto, req: Request) {
+    try {
+      const { channel_id, user_id, role } = addUser;
+      const currentUserId = req.user.userId;
+
+      const channel = await this.channelRepo.findOne({
+        where: { id: channel_id },
+      });
+      if (!channel) {
+        throw new BadRequestException('Channel does not exist');
+      }
+
+      const addedUser = await this.userRepo.findOne({
+        where: { id: user_id },
+      });
+      if (!addedUser) {
+        throw new BadRequestException('User does not exist');
+      }
+
+      const currentUserChannel = await this.userChannelRepo.find({
+        where: {
+          user: { id: currentUserId },
+          channel: { id: channel_id },
+        },
+        relations: ['user', 'channel'],
+      });
+      if (currentUserChannel.length === 0) {
+        throw new BadRequestException('You are not a member of this channel');
+      }
+
+      const existingUserChannel = await this.userChannelRepo.findOne({
+        where: {
+          user: { id: user_id },
+          channel: { id: channel_id },
+        },
+      });
+      if (existingUserChannel) {
+        throw new BadRequestException(
+          'User is already a member of this channel',
+        );
+      }
+
+      const userChannel = this.userChannelRepo.create({
+        channel: channel,
+        user: { id: user_id },
+        role: role || ChannelRole.MEMBER,
+      });
+      await this.userChannelRepo.save(userChannel);
+      return {
+        message: 'User added to channel successfully',
+        channel,
+        user: addedUser,
+      };
     } catch (error: unknown) {
       if (typeof error === 'object' && error !== null && 'message' in error) {
         throw new BadRequestException((error as { message: string }).message);

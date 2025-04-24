@@ -1,4 +1,4 @@
-import { JwtPayload } from 'src/auth/types/jwt-payload.interface';
+import { JwtPayload } from './jwt-payload.interface';
 
 declare module 'express' {
   interface Request {
