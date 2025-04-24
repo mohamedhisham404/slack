@@ -11,6 +11,8 @@ import {
   ChannelRole,
   UserChannel,
 } from 'src/channels/entities/user-channel.entity';
+import { AddUserDto } from './dto/add-user.dto';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class WorkspaceService {
@@ -26,6 +28,9 @@ export class WorkspaceService {
 
     @InjectRepository(UserChannel)
     private readonly userChannelRepo: Repository<UserChannel>,
+
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   async create(createWorkspaceDto: CreateWorkspaceDto, req: Request) {
@@ -64,6 +69,79 @@ export class WorkspaceService {
       }
 
       throw new BadRequestException('Failed to create workspace');
+    }
+  }
+
+  async addUser(addUser: AddUserDto, req: Request) {
+    try {
+      const { workspace_id, user_id, role } = addUser;
+      const currentUserId = req.user.userId;
+
+      const workspace = await this.workSpaceRepo.findOne({
+        where: { id: workspace_id },
+      });
+      if (!workspace) {
+        throw new BadRequestException('Workspace does not exist');
+      }
+
+      const addedUser = await this.userRepo.findOne({
+        where: { id: user_id },
+      });
+      if (!addedUser) {
+        throw new BadRequestException('User does not exist');
+      }
+
+      const currentUserWorkspace = await this.userWorkspaceRepo.find({
+        where: {
+          user: { id: currentUserId },
+          workspace: { id: workspace_id },
+        },
+        relations: ['user', 'workspace'],
+      });
+      if (currentUserWorkspace.length === 0) {
+        throw new BadRequestException('You are not a member of this workspace');
+      }
+
+      const existingUserworkspace = await this.userWorkspaceRepo.findOne({
+        where: {
+          user: { id: user_id },
+          workspace: { id: workspace_id },
+        },
+      });
+      if (existingUserworkspace) {
+        throw new BadRequestException(
+          'User is already a member of this workspace',
+        );
+      }
+
+      const userWorkspace = this.userWorkspaceRepo.create({
+        workspace: { id: workspace_id },
+        user: { id: user_id },
+        role: role,
+      });
+      await this.userWorkspaceRepo.save(userWorkspace);
+
+      const channel = await this.channelRepo.findOne({
+        where: { workspace: { id: workspace_id }, name: 'general' },
+      });
+      const userChannel = this.userChannelRepo.create({
+        channel: { id: channel?.id },
+        user: { id: user_id },
+        role: ChannelRole.MEMBER,
+      });
+      await this.userChannelRepo.save(userChannel);
+
+      return {
+        message: 'User added to workspace successfully',
+        workspace,
+        user: addedUser,
+      };
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'message' in error) {
+        throw new BadRequestException((error as { message: string }).message);
+      }
+
+      throw new BadRequestException('Failed to add user to workspace');
     }
   }
 
