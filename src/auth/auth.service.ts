@@ -58,6 +58,8 @@ export class AuthService {
       const { accessToken, refreshToken } = this.generateToken(user.id);
       setCookies(res, accessToken, refreshToken);
 
+      res.setHeader('Authorization', `Bearer ${accessToken}`);
+
       return res.status(201).json({
         statusCode: 201,
         message: 'User created successfully',
@@ -91,6 +93,8 @@ export class AuthService {
       const { accessToken, refreshToken } = this.generateToken(user.id);
 
       setCookies(res, accessToken, refreshToken);
+
+      res.setHeader('Authorization', `Bearer ${accessToken}`);
 
       return res.status(201).json({
         statusCode: 201,

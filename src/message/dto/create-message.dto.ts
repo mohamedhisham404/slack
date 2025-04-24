@@ -11,8 +11,9 @@ import { CreateAttachmentDto } from 'src/attachment/dto/create-attachment.dto';
 export class CreateMessageDto {
   @IsOptional() @IsString() content?: string;
 
-  @IsNumber() user_id: number;
-  @IsNumber() channel_id: number;
+  @IsBoolean() is_dm: boolean;
+  @IsOptional() @IsNumber() receiver_id?: number;
+  @IsOptional() @IsNumber() channel_id: number;
 
   @IsOptional() @IsNumber() parent_message?: number;
   @IsOptional() @IsBoolean() is_pinned?: boolean;

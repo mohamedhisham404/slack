@@ -15,6 +15,7 @@ import { NotificationChannelModule } from './notification-channel/notification-c
 import { NotificationWorkspaceModule } from './notification-workspace/notification-workspace.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+import { EventsModule } from './events/events.module';
 import config from './config/config';
 
 @Module({
@@ -40,6 +41,7 @@ import config from './config/config';
     NotificationChannelModule,
     NotificationWorkspaceModule,
     AuthModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

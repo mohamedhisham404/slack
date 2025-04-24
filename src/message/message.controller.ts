@@ -1,15 +1,31 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { Request } from 'express';
+import { AuthGuard } from 'src/guards/auth.guards';
 
+@UseGuards(AuthGuard)
 @Controller('message')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   @Post()
-  create(@Body() createMessageDto: CreateMessageDto) {
-    return this.messageService.create(createMessageDto);
+  async create(
+    @Body() createMessageDto: CreateMessageDto,
+    @Req() req: Request,
+  ) {
+    return this.messageService.create(createMessageDto, req);
   }
 
   @Get()

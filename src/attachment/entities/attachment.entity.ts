@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Message } from 'src/message/entities/message.entity';
 
+export type AttachmentType = 'image' | 'video' | 'file' | 'link';
 @Entity()
 export class Attachment {
   @PrimaryGeneratedColumn()
@@ -23,7 +24,7 @@ export class Attachment {
   title: string;
 
   @Column({ type: 'enum', enum: ['image', 'video', 'file', 'link'] })
-  type: string;
+  type: AttachmentType;
 
   @Column('float')
   size: number;
