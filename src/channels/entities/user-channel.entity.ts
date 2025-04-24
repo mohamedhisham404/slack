@@ -9,6 +9,11 @@ import {
 import { User } from 'src/user/entities/user.entity';
 import { Channels } from './channel.entity';
 
+export enum ChannelRole {
+  ADMIN = 'admin',
+  MEMBER = 'member',
+}
+
 @Entity('user_channels')
 export class UserChannel {
   @PrimaryGeneratedColumn()
@@ -22,9 +27,13 @@ export class UserChannel {
   @JoinColumn({ name: 'channel_id' })
   channel: Channels;
 
-  @Column({ default: 'member' })
+  @Column({ type: 'enum', enum: ChannelRole, default: ChannelRole.MEMBER })
   role: string;
 
-  @CreateDateColumn({ name: 'joined_at' })
+  @CreateDateColumn({
+    name: 'joined_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   joinedAt: Date;
 }

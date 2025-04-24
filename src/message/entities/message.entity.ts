@@ -11,6 +11,7 @@ import {
 import { Channels } from 'src/channels/entities/channel.entity';
 import { User } from 'src/user/entities/user.entity';
 import { MessageReaction } from './message-reaction.entity';
+import { Attachment } from 'src/attachment/entities/attachment.entity';
 
 @Entity()
 export class Message {
@@ -57,4 +58,9 @@ export class Message {
 
   @OneToMany(() => MessageReaction, (reaction) => reaction.message)
   reactions: MessageReaction[];
+
+  @OneToMany(() => Attachment, (attachment) => attachment.message, {
+    cascade: true,
+  })
+  attachments?: Attachment[];
 }

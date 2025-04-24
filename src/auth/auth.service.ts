@@ -12,7 +12,7 @@ import { User } from 'src/user/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { setCookies } from 'src/utils/setCookies';
 import { Request, Response } from 'express';
-import { JwtPayload } from './types/jwt-payload.interface';
+import { JwtPayload } from '../types/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {

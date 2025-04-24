@@ -17,10 +17,10 @@ export class Workspace {
   @Column()
   name: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   update_at: Date;
 
   @OneToMany(() => Channels, (channel) => channel.workspace)

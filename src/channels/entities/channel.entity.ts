@@ -19,7 +19,9 @@ export class Channels {
   @Column()
   workspace_id: number;
 
-  @ManyToOne(() => Workspace, (workspace) => workspace.channels)
+  @ManyToOne(() => Workspace, (workspace) => workspace.channels, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'workspace_id' })
   workspace: Workspace;
 
@@ -45,7 +47,7 @@ export class Channels {
   @Column({ default: false })
   is_dm: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
   @Column({ type: 'timestamp', nullable: true })

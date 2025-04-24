@@ -9,6 +9,11 @@ import {
 import { User } from 'src/user/entities/user.entity';
 import { Workspace } from './workspace.entity';
 
+export enum workspaceRole {
+  ADMIN = 'admin',
+  MEMBER = 'member',
+}
+
 @Entity('user_workspaces')
 export class UserWorkspace {
   @PrimaryGeneratedColumn()
@@ -18,13 +23,19 @@ export class UserWorkspace {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => Workspace, (workspace) => workspace.userWorkspaces)
+  @ManyToOne(() => Workspace, (workspace) => workspace.userWorkspaces, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'workspace_id' })
   workspace: Workspace;
 
-  @Column({ default: 'member' })
+  @Column({ type: 'enum', enum: workspaceRole, default: workspaceRole.MEMBER })
   role: string;
 
-  @CreateDateColumn({ name: 'joined_at' })
+  @CreateDateColumn({
+    name: 'joined_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   joinedAt: Date;
 }
