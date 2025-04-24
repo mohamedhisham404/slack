@@ -6,18 +6,26 @@ import {
   Patch,
   Param,
   Delete,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
 import { CreateChannelsDto } from './dto/create-channel.dto';
 import { UpdateChannelsDto } from './dto/update-channel.dto';
+import { Request } from 'express';
+import { AuthGuard } from 'src/guards/auth.guards';
 
+@UseGuards(AuthGuard)
 @Controller('channels')
 export class ChannelsController {
   constructor(private readonly channelsService: ChannelsService) {}
 
   @Post()
-  create(@Body() createChannelDto: CreateChannelsDto) {
-    return this.channelsService.create(createChannelDto);
+  async create(
+    @Body() createChannelDto: CreateChannelsDto,
+    @Req() req: Request,
+  ) {
+    return this.channelsService.create(createChannelDto, req);
   }
 
   @Get()

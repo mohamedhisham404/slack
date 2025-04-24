@@ -32,10 +32,6 @@ export class WorkspaceService {
     try {
       const userId = req.user.userId;
 
-      if (!userId) {
-        throw new BadRequestException('User ID not found in request');
-      }
-
       const workspace = this.workSpaceRepo.create({
         name: createWorkspaceDto.name,
       });
