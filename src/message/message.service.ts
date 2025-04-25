@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   CreateChannelMessageDto,
   CreateDMMessageDTO,
@@ -81,7 +81,6 @@ export class MessageService {
     const message = this.messageRepo.create({
       content,
       is_pinned,
-      attachments,
       parent_message: parent_message_id,
       channel: { id: channel_id },
       user: { id: userId },
@@ -165,7 +164,6 @@ export class MessageService {
         );
       }
 
-      Logger.log(channel);
       if (parent_message_id) {
         const parentMessage = await this.messageRepo.findOne({
           where: { id: parent_message_id },
@@ -182,7 +180,6 @@ export class MessageService {
         channel: { id: channel.id },
         user: { id: userId },
         is_pinned,
-        attachments,
         parent_message: parent_message_id,
       });
 
