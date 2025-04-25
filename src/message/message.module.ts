@@ -9,6 +9,7 @@ import { ChannelsModule } from 'src/channels/channels.module';
 import { EventsModule } from 'src/events/events.module';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { Attachment } from 'src/attachment/entities/attachment.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { User } from 'src/user/entities/user.entity';
       Channels,
       UserChannel,
       User,
+      Attachment,
     ]),
     ChannelsModule,
     EventsModule,

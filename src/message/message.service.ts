@@ -15,6 +15,7 @@ import {
   UserChannel,
 } from 'src/channels/entities/user-channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { Attachment } from 'src/attachment/entities/attachment.entity';
 
 @Injectable()
 export class MessageService {
@@ -30,6 +31,9 @@ export class MessageService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    @InjectRepository(Attachment)
+    private readonly attachmentRepo: Repository<Attachment>,
 
     private readonly channelsService: ChannelsService,
 
@@ -86,6 +90,17 @@ export class MessageService {
       user: { id: userId },
     });
     const savedMessage = await this.messageRepo.save(message);
+
+    if (attachments) {
+      for (const attachment of attachments) {
+        const newAttachment = this.attachmentRepo.create({
+          ...attachment,
+          message: savedMessage,
+        });
+        await this.attachmentRepo.save(newAttachment);
+      }
+    }
+
     this.eventsGateway.sendMessageToChannel(channel_id, message);
     return savedMessage;
   }
@@ -184,6 +199,17 @@ export class MessageService {
       });
 
       const savedMessage = await this.messageRepo.save(message);
+
+      if (attachments) {
+        for (const attachment of attachments) {
+          const newAttachment = this.attachmentRepo.create({
+            ...attachment,
+            message: savedMessage,
+          });
+          await this.attachmentRepo.save(newAttachment);
+        }
+      }
+
       this.eventsGateway.sendDirectMessage(receiver_id, message);
       return savedMessage;
     } catch (error: unknown) {
