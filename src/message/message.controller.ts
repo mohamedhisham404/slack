@@ -10,8 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
+import {
+  CreateChannelMessageDto,
+  CreateDMMessageDTO,
+} from './dto/create-message.dto';
 import { Request } from 'express';
 import { AuthGuard } from 'src/guards/auth.guards';
 
@@ -20,12 +22,23 @@ import { AuthGuard } from 'src/guards/auth.guards';
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
-  @Post()
-  async create(
-    @Body() createMessageDto: CreateMessageDto,
+  @Post('channel')
+  async createChannelMessage(
+    @Body() CreateChannelMessageDto: CreateChannelMessageDto,
     @Req() req: Request,
   ) {
-    return this.messageService.create(createMessageDto, req);
+    return this.messageService.createChannelMessage(
+      CreateChannelMessageDto,
+      req,
+    );
+  }
+
+  @Post('user')
+  async createUserMessage(
+    @Body() CreateDMMessageDTO: CreateDMMessageDTO,
+    @Req() req: Request,
+  ) {
+    return this.messageService.createUserMessage(CreateDMMessageDTO, req);
   }
 
   @Get()
@@ -38,10 +51,10 @@ export class MessageController {
     return this.messageService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMessageDto: UpdateMessageDto) {
-    return this.messageService.update(+id, updateMessageDto);
-  }
+  // @Patch(':id')
+  // update(@Param('id') id: string, @Body() updateMessageDto: UpdateMessageDto) {
+  //   return this.messageService.update(+id, updateMessageDto);
+  // }
 
   @Delete(':id')
   remove(@Param('id') id: string) {

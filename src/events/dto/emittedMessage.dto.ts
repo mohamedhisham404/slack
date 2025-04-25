@@ -2,8 +2,6 @@ import { CreateAttachmentDto } from 'src/attachment/dto/create-attachment.dto';
 
 export class EmittedMessageDto {
   content?: string;
-  is_dm: boolean;
-  channel_id: number;
   parent_message?: number;
   is_pinned?: boolean;
   attachments?: CreateAttachmentDto[];

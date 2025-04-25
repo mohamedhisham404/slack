@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  CreateChannelMessageDto,
+  CreateDMMessageDTO,
+} from './dto/create-message.dto';
 import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Message } from './entities/message.entity';
@@ -34,18 +36,80 @@ export class MessageService {
     private readonly eventsGateway: EventsGateway,
   ) {}
 
-  async create(createMessageDto: CreateMessageDto, req: Request) {
+  async createChannelMessage(
+    CreateChannelMessageDto: CreateChannelMessageDto,
+    req: Request,
+  ) {
+    const { content, channel_id, parent_message_id, is_pinned, attachments } =
+      CreateChannelMessageDto;
+    const userId = req.user.userId;
+
+    if (!content && !attachments) {
+      throw new BadRequestException(
+        'Message content or attachments are required',
+      );
+    }
+
+    const channel = await this.channelsRepo.findOne({
+      where: { id: channel_id },
+    });
+    if (!channel) {
+      throw new BadRequestException('Channel not found');
+    }
+
+    const userChannel = await this.userChannelRepo.findOne({
+      where: {
+        channel: { id: channel_id },
+        user: { id: userId },
+      },
+    });
+    if (!userChannel) {
+      throw new BadRequestException('User not found in channel');
+    }
+
+    if (parent_message_id) {
+      const parentMessage = await this.messageRepo.findOne({
+        where: { id: parent_message_id },
+      });
+      if (!parentMessage) {
+        throw new BadRequestException('Parent message not found');
+      }
+      parentMessage.reply_count += 1;
+      await this.messageRepo.save(parentMessage);
+    }
+
+    const message = this.messageRepo.create({
+      content,
+      is_pinned,
+      attachments,
+      parent_message: parent_message_id,
+      channel: { id: channel_id },
+      user: { id: userId },
+    });
+    const savedMessage = await this.messageRepo.save(message);
+    this.eventsGateway.sendMessageToChannel(channel_id, message);
+    return savedMessage;
+  }
+
+  async createUserMessage(
+    CreateDMMessageDTO: CreateDMMessageDTO,
+    req: Request,
+  ) {
     try {
-      const userId = req.user.userId;
       const {
-        channel_id,
         content,
-        parent_message,
+        receiver_id,
+        parent_message_id,
         is_pinned,
         attachments,
-        is_dm,
-        receiver_id,
-      } = createMessageDto;
+      } = CreateDMMessageDTO;
+      const userId = req.user.userId;
+
+      if (receiver_id === userId) {
+        throw new BadRequestException(
+          'You cannot send a message to yourself right now',
+        );
+      }
 
       if (!content && !attachments) {
         throw new BadRequestException(
@@ -53,86 +117,58 @@ export class MessageService {
         );
       }
 
-      if (!channel_id && !receiver_id) {
-        throw new BadRequestException('Channel ID or Receiver ID is required');
+      const receiver = await this.userRepo.findOne({
+        where: { id: receiver_id },
+      });
+      if (!receiver) {
+        throw new BadRequestException('Receiver not found');
       }
 
-      if (channel_id && receiver_id) {
-        throw new BadRequestException(
-          'Channel ID and Receiver ID cannot be used together',
+      let channel = await this.channelsRepo
+        .createQueryBuilder('channel')
+        .innerJoin('channel.userChannels', 'uc')
+        .where('channel.is_dm = :isDM', { isDM: true })
+        .andWhere((qb) => {
+          const subQuery = qb
+            .subQuery()
+            .select('uc2.channel_id')
+            .from(UserChannel, 'uc2')
+            .where('uc2.user_id IN (:...userIds)', {
+              userIds: [userId, receiver_id],
+            })
+            .groupBy('uc2.channel_id')
+            .having('COUNT(DISTINCT uc2.user_id) = 2')
+            .getQuery();
+
+          return 'channel.id IN (' + subQuery + ')';
+        })
+        .getOne();
+      if (!channel) {
+        channel = await this.channelsService.create(
+          {
+            workspace_id: 1,
+            name: 'Direct Message',
+            topic: 'Direct Message',
+            description: 'Direct Message',
+            is_private: true,
+            is_dm: true,
+          },
+          req,
+        );
+        await this.channelsService.addUser(
+          {
+            channel_id: channel.id,
+            user_id: receiver_id,
+            role: ChannelRole.ADMIN,
+          },
+          req,
         );
       }
 
-      if (is_dm && !receiver_id) {
-        throw new BadRequestException('Receiver ID is required for DM');
-      }
-
-      if (receiver_id) {
-        const receiver = await this.userRepo.findOne({
-          where: { id: receiver_id },
-        });
-        if (!receiver) {
-          throw new BadRequestException('Receiver not found');
-        }
-      }
-
-      if (receiver_id == userId) {
-        throw new BadRequestException(
-          'You cannot send a message to yourself right now',
-        );
-      }
-
-      if (!channel_id && is_dm && receiver_id) {
-        const channel = await this.channelsRepo
-          .createQueryBuilder('channel')
-          .innerJoin('channel.userChannels', 'uc')
-          .where('channel.is_dm = :isDM', { isDM: true })
-          .andWhere((qb) => {
-            const subQuery = qb
-              .subQuery()
-              .select('uc2.channel_id')
-              .from(UserChannel, 'uc2')
-              .where('uc2.user_id IN (:...userIds)', {
-                userIds: [userId, receiver_id],
-              })
-              .groupBy('uc2.channel_id')
-              .having('COUNT(DISTINCT uc2.user_id) = 2')
-              .getQuery();
-
-            return 'channel.id IN (' + subQuery + ')';
-          })
-          .getOne();
-
-        if (channel) {
-          createMessageDto.channel_id = channel.id;
-        } else {
-          const newDMChannel = await this.channelsService.create(
-            {
-              workspace_id: 1,
-              name: 'Direct Message',
-              topic: 'Direct Message',
-              description: 'Direct Message',
-              is_private: true,
-              is_dm: true,
-            },
-            req,
-          );
-          await this.channelsService.addUser(
-            {
-              channel_id: newDMChannel.id,
-              user_id: receiver_id,
-              role: ChannelRole.ADMIN,
-            },
-            req,
-          );
-
-          createMessageDto.channel_id = newDMChannel.id;
-        }
-      }
-
-      if (parent_message) {
+      Logger.log(channel);
+      if (parent_message_id) {
         const parentMessage = await this.messageRepo.findOne({
-          where: { id: parent_message },
+          where: { id: parent_message_id },
         });
         if (!parentMessage) {
           throw new BadRequestException('Parent message not found');
@@ -141,23 +177,17 @@ export class MessageService {
         await this.messageRepo.save(parentMessage);
       }
 
-      const channel = await this.channelsRepo.findOne({
-        where: { id: channel_id },
-      });
-      if (!channel) {
-        throw new BadRequestException('Channel not found');
-      }
       const message = this.messageRepo.create({
         content,
-        channel,
+        channel: { id: channel.id },
         user: { id: userId },
-        parent_message,
         is_pinned,
         attachments,
+        parent_message: parent_message_id,
       });
 
-      this.eventsGateway.SendMessage({ ...message, is_dm });
       const savedMessage = await this.messageRepo.save(message);
+      this.eventsGateway.sendDirectMessage(receiver_id, message);
       return savedMessage;
     } catch (error: unknown) {
       if (typeof error === 'object' && error !== null && 'message' in error) {
@@ -174,10 +204,6 @@ export class MessageService {
 
   findOne(id: number) {
     return `This action returns a #${id} message`;
-  }
-
-  update(id: number, updateMessageDto: UpdateMessageDto) {
-    return `This action updates a #${id} message`;
   }
 
   remove(id: number) {

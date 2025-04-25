@@ -8,14 +8,26 @@ import {
 } from 'class-validator';
 import { CreateAttachmentDto } from 'src/attachment/dto/create-attachment.dto';
 
-export class CreateMessageDto {
+export class CreateChannelMessageDto {
   @IsOptional() @IsString() content?: string;
 
-  @IsBoolean() is_dm: boolean;
-  @IsOptional() @IsNumber() receiver_id?: number;
-  @IsOptional() @IsNumber() channel_id: number;
+  @IsNumber() channel_id: number;
 
-  @IsOptional() @IsNumber() parent_message?: number;
+  @IsOptional() @IsNumber() parent_message_id?: number;
+  @IsOptional() @IsBoolean() is_pinned?: boolean;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateAttachmentDto)
+  attachments?: CreateAttachmentDto[];
+}
+
+export class CreateDMMessageDTO {
+  @IsOptional() @IsString() content?: string;
+
+  @IsNumber() receiver_id: number;
+
+  @IsOptional() @IsNumber() parent_message_id?: number;
   @IsOptional() @IsBoolean() is_pinned?: boolean;
 
   @IsOptional()
