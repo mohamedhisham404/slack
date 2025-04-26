@@ -19,12 +19,17 @@ export class AttachmentService {
     return parseFloat((bytes / (1024 * 1024)).toFixed(2));
   }
 
-  create(file: Express.Multer.File, createAttachmentDto: CreateAttachmentDto) {
+  async create(
+    file: Express.Multer.File,
+    createAttachmentDto: CreateAttachmentDto,
+  ) {
     try {
       const { message_id, title, type } = createAttachmentDto;
 
-      if (!fs.existsSync(this.uploadPath)) {
-        fs.mkdirSync(this.uploadPath, { recursive: true });
+      try {
+        await fs.promises.access(this.uploadPath);
+      } catch {
+        await fs.promises.mkdir(this.uploadPath, { recursive: true });
       }
 
       const allowedTypes: AttachmentType[] = [
@@ -45,7 +50,7 @@ export class AttachmentService {
         size: this.bytesToMB(file.size),
       });
 
-      return this.attachmentRepository.save(attachment);
+      return await this.attachmentRepository.save(attachment);
     } catch (error: unknown) {
       if (typeof error === 'object' && error !== null && 'message' in error) {
         throw new BadRequestException((error as { message: string }).message);
@@ -55,15 +60,57 @@ export class AttachmentService {
     }
   }
 
-  findAll() {
-    return `This action returns all attachment`;
+  async findAll() {
+    const res = await this.attachmentRepository.find({
+      relations: {
+        message: true,
+      },
+    });
+
+    if (!res) {
+      throw new BadRequestException('Attachments not found');
+    }
+    return res;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} attachment`;
+  async findOne(id: number) {
+    const res = await this.attachmentRepository.findOne({
+      where: { id },
+      relations: {
+        message: true,
+      },
+    });
+
+    if (!res) {
+      throw new BadRequestException('Attachment not found');
+    }
+    return res;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} attachment`;
+  async remove(id: number) {
+    try {
+      const attachment = await this.attachmentRepository.findOne({
+        where: { id },
+      });
+
+      if (!attachment) {
+        throw new BadRequestException(`Attachment with ID ${id} not found`);
+      }
+
+      const filePath = attachment.url;
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+      }
+
+      await this.attachmentRepository.delete(id);
+
+      return { message: `Attachment with ID ${id} deleted successfully.` };
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'message' in error) {
+        throw new BadRequestException((error as { message: string }).message);
+      }
+
+      throw new BadRequestException('Failed to delete attachment');
+    }
   }
 }

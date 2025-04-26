@@ -8,14 +8,17 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { AttachmentService } from './attachment.service';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { AuthGuard } from 'src/guards/auth.guards';
 
 @Controller('attachment')
+@UseGuards(AuthGuard)
 export class AttachmentController {
   constructor(private readonly attachmentService: AttachmentService) {}
 
@@ -47,17 +50,17 @@ export class AttachmentController {
   }
 
   @Get()
-  findAll() {
+  async findAll() {
     return this.attachmentService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     return this.attachmentService.findOne(+id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string) {
     return this.attachmentService.remove(+id);
   }
 }
