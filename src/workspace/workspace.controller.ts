@@ -48,6 +48,15 @@ export class WorkspaceController {
     return this.workspaceService.update(+id, updateWorkspaceDto, req);
   }
 
+  @Delete(':workspace_id/user/:user_id')
+  async removeUser(
+    @Param('workspace_id') workspace_id: string,
+    @Param('user_id') user_id: string,
+    @Req() req: Request,
+  ) {
+    return this.workspaceService.removeUser(+workspace_id, +user_id, req);
+  }
+
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: Request) {
     return this.workspaceService.remove(+id, req);

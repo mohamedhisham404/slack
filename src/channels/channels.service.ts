@@ -389,6 +389,57 @@ export class ChannelsService {
     }
   }
 
+  async removeUser(channel_id: number, user_id: number, req: Request) {
+    try {
+      const currentUserId = req.user.userId;
+      await this.checkTheChannel(channel_id, currentUserId);
+
+      if (currentUserId === user_id) {
+        throw new BadRequestException(
+          'You cannot remove yourself from the channel',
+        );
+      }
+
+      const currentUserChannel = await this.userChannelRepo.findOne({
+        where: {
+          user: { id: currentUserId },
+          channel: { id: channel_id },
+        },
+      });
+      if (currentUserChannel?.role !== ChannelRole.ADMIN) {
+        throw new BadRequestException(
+          'You are not allowed to remove users from this channel',
+        );
+      }
+
+      const userChannel = await this.userChannelRepo.findOne({
+        where: {
+          user: { id: user_id },
+          channel: { id: channel_id },
+        },
+      });
+      if (!userChannel) {
+        throw new NotFoundException('User not found in this channel');
+      }
+      if (userChannel.role === ChannelRole.ADMIN) {
+        throw new BadRequestException(
+          'You cannot remove an admin from this channel',
+        );
+      }
+      const deletedUserChannel = await this.userChannelRepo.remove(userChannel);
+      if (!deletedUserChannel) {
+        throw new NotFoundException('User not found in this channel');
+      }
+      return {
+        message: 'User removed from channel successfully',
+        userId: user_id,
+        channelId: channel_id,
+      };
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
   async remove(id: number, req: Request) {
     const userId = req.user.userId;
 

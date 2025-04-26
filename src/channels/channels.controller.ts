@@ -74,6 +74,15 @@ export class ChannelsController {
     return this.channelsService.update(+id, updateChannelDto, req);
   }
 
+  @Delete(':channel_id/user/:user_id')
+  async removeUser(
+    @Param('channel_id') channel_id: string,
+    @Param('user_id') user_id: string,
+    @Req() req: Request,
+  ) {
+    return this.channelsService.removeUser(+channel_id, +user_id, req);
+  }
+
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: Request) {
     return this.channelsService.remove(+id, req);

@@ -186,6 +186,69 @@ export class WorkspaceService {
     return this.workSpaceRepo.update(id, updateWorkspaceDto);
   }
 
+  async removeUser(workspace_id: number, user_id: number, req: Request) {
+    try {
+      const currentUserId = req.user.userId;
+      await this.checkWorkspace(workspace_id, currentUserId);
+
+      if (user_id === currentUserId) {
+        throw new BadRequestException(
+          'You cannot remove yourself from the workspace',
+        );
+      }
+
+      const currentUserworkspace = await this.userWorkspaceRepo.findOne({
+        where: {
+          user: { id: currentUserId },
+          workspace: { id: workspace_id },
+        },
+      });
+      if (currentUserworkspace?.role !== workspaceRole.ADMIN) {
+        throw new BadRequestException('You are not an admin of this workspace');
+      }
+
+      const userWorkspace = await this.userWorkspaceRepo.findOne({
+        where: {
+          user: { id: user_id },
+          workspace: { id: workspace_id },
+        },
+      });
+      if (!userWorkspace) {
+        throw new NotFoundException('User not found in this workspace');
+      }
+      if (userWorkspace.role === workspaceRole.ADMIN) {
+        throw new BadRequestException(
+          'You cannot remove a user who is an admin of this workspace',
+        );
+      }
+      const channels = await this.channelRepo.find({
+        where: {
+          workspace: { id: workspace_id },
+        },
+      });
+      const channelIds = channels.map((channel) => channel.id);
+      await this.userChannelRepo.delete({
+        channel: { id: In(channelIds) },
+        user: { id: user_id },
+      });
+      await this.userWorkspaceRepo.delete({
+        workspace: { id: workspace_id },
+        user: { id: user_id },
+      });
+      const result = await this.userRepo.delete(user_id);
+      if (result.affected === 0) {
+        throw new NotFoundException('User not found');
+      }
+      return {
+        message: 'User removed from workspace successfully',
+        userId: user_id,
+        workspaceId: workspace_id,
+      };
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
   async remove(id: number, req: Request) {
     const userId = req.user.userId;
     const workspaceUser = await this.userWorkspaceRepo.findOne({
