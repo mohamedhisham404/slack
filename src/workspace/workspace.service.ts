@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -41,7 +45,7 @@ export class WorkspaceService {
       },
     });
     if (!workspace) {
-      throw new BadRequestException('Workspace not found');
+      throw new NotFoundException('Workspace not found');
     }
 
     const userWorkspace = await this.userWorkspaceRepo.findOne({
@@ -212,7 +216,7 @@ export class WorkspaceService {
     });
     const result = await this.workSpaceRepo.delete(id);
     if (result.affected === 0) {
-      throw new BadRequestException('Workspace not found');
+      throw new NotFoundException('Workspace not found');
     }
     return {
       message: 'Workspace deleted successfully',

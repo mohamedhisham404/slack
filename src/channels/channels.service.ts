@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateChannelsDto } from './dto/create-channel.dto';
 import { UpdateChannelsDto } from './dto/update-channel.dto';
 import { Request } from 'express';
@@ -41,7 +45,7 @@ export class ChannelsService {
       },
     });
     if (!channel) {
-      throw new BadRequestException('Channel not found');
+      throw new NotFoundException('Channel not found');
     }
 
     const userChannel = await this.userChannelRepo.findOne({
@@ -180,7 +184,7 @@ export class ChannelsService {
       const user_id = req.user.userId;
 
       if (workspace_id === 1) {
-        throw new BadRequestException('Workspace not found');
+        throw new NotFoundException('Workspace not found');
       }
 
       await this.workspaceService.checkWorkspace(workspace_id, user_id);
@@ -208,7 +212,7 @@ export class ChannelsService {
         },
       });
       if (!channels || channels.length === 0) {
-        throw new BadRequestException('Channels not found');
+        throw new NotFoundException('Channels not found');
       }
 
       return channels;
@@ -226,7 +230,7 @@ export class ChannelsService {
       const user_id = req.user.userId;
 
       if (workspace_id === 1) {
-        throw new BadRequestException('Workspace not found');
+        throw new NotFoundException('Workspace not found');
       }
       await this.workspaceService.checkWorkspace(workspace_id, user_id);
 
@@ -255,7 +259,7 @@ export class ChannelsService {
         },
       });
       if (!channel) {
-        throw new BadRequestException('Channel not found');
+        throw new NotFoundException('Channel not found');
       }
       return channel;
     } catch (error) {
@@ -319,12 +323,13 @@ export class ChannelsService {
       );
 
       if (!otherParticipant) {
-        throw new BadRequestException('Other participant not found');
+        throw new NotFoundException('Other participant not found');
       }
 
       return {
+        channelId: userChannel[0].channel.id,
         createdAt: userChannel[0].channel['created_at'],
-        creaedBy: userChannel[0].channel['created_by'],
+        createdBy: userChannel[0].channel['created_by'],
         name: otherParticipant.user.name,
       };
     } catch (error) {
@@ -356,7 +361,7 @@ export class ChannelsService {
         },
       });
       if (!channel) {
-        throw new BadRequestException('Channel not found');
+        throw new NotFoundException('Channel not found');
       }
 
       const existingChannel = await this.channelRepo.findOne({
@@ -405,7 +410,7 @@ export class ChannelsService {
       },
     });
     if (!channel) {
-      throw new BadRequestException('Channel not found');
+      throw new NotFoundException('Channel not found');
     }
     const userChannels = await this.userChannelRepo.find({
       where: {
@@ -417,7 +422,7 @@ export class ChannelsService {
     }
     const deletedChannel = await this.channelRepo.remove(channel);
     if (!deletedChannel) {
-      throw new BadRequestException('Channel not found');
+      throw new NotFoundException('Channel not found');
     }
     return {
       message: 'Channel deleted successfully',

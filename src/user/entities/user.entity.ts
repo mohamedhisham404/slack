@@ -9,6 +9,7 @@ import {
 import { Message } from 'src/message/entities/message.entity';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity()
 export class User {
@@ -24,6 +25,7 @@ export class User {
   @Column({ nullable: true, unique: true })
   phone: string;
 
+  @Exclude()
   @Column()
   password: string;
 

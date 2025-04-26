@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   CreateChannelMessageDto,
   CreateDMMessageDTO,
@@ -54,7 +58,7 @@ export class MessageService {
       where: { id: channel_id },
     });
     if (!channel) {
-      throw new BadRequestException('Channel not found');
+      throw new NotFoundException('Channel not found');
     }
 
     const userChannel = await this.userChannelRepo.findOne({
@@ -72,7 +76,7 @@ export class MessageService {
         where: { id: parent_message_id },
       });
       if (!parentMessage) {
-        throw new BadRequestException('Parent message not found');
+        throw new NotFoundException('Parent message not found');
       }
       parentMessage.reply_count += 1;
       await this.messageRepo.save(parentMessage);
@@ -127,7 +131,7 @@ export class MessageService {
         where: { id: receiver_id },
       });
       if (!receiver) {
-        throw new BadRequestException('Receiver not found');
+        throw new NotFoundException('Receiver not found');
       }
 
       let channel = await this.channelsRepo
@@ -176,7 +180,7 @@ export class MessageService {
           where: { id: parent_message_id },
         });
         if (!parentMessage) {
-          throw new BadRequestException('Parent message not found');
+          throw new NotFoundException('Parent message not found');
         }
         parentMessage.reply_count += 1;
         await this.messageRepo.save(parentMessage);

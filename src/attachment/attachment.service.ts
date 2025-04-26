@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Attachment, AttachmentType } from './entities/attachment.entity';
@@ -52,7 +56,7 @@ export class AttachmentService {
         'audio',
       ];
       if (!allowedTypes.includes(type)) {
-        throw new Error(`Invalid attachment type: ${type}`);
+        throw new BadRequestException(`Invalid attachment type: ${type}`);
       }
 
       const attachment = this.attachmentRepository.create({
@@ -87,7 +91,7 @@ export class AttachmentService {
       });
 
       if (!attachments || attachments.length === 0) {
-        throw new BadRequestException('Attachments not found');
+        throw new NotFoundException('Attachments not found');
       }
 
       return attachments;
@@ -119,7 +123,7 @@ export class AttachmentService {
       });
 
       if (!attachment) {
-        throw new BadRequestException('Attachment not found');
+        throw new NotFoundException('Attachment not found');
       }
 
       return attachment;
@@ -138,7 +142,7 @@ export class AttachmentService {
       });
 
       if (!attachment) {
-        throw new BadRequestException(
+        throw new NotFoundException(
           `Attachment with ID ${attachment_id} not found`,
         );
       }
@@ -147,7 +151,7 @@ export class AttachmentService {
       if (fs.existsSync(filePath)) {
         await fs.promises.unlink(filePath);
       } else {
-        throw new BadRequestException(
+        throw new NotFoundException(
           `File with path ${filePath} does not exist`,
         );
       }
