@@ -34,13 +34,8 @@ export class WorkspaceController {
     return this.workspaceService.addUser(addUser, req);
   }
 
-  @Get()
-  findAll() {
-    return this.workspaceService.findAll();
-  }
-
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     return this.workspaceService.findOne(+id);
   }
 
@@ -48,12 +43,13 @@ export class WorkspaceController {
   update(
     @Param('id') id: string,
     @Body() updateWorkspaceDto: UpdateWorkspaceDto,
+    @Req() req: Request,
   ) {
-    return this.workspaceService.update(+id, updateWorkspaceDto);
+    return this.workspaceService.update(+id, updateWorkspaceDto, req);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.workspaceService.remove(+id);
+  async remove(@Param('id') id: string, @Req() req: Request) {
+    return this.workspaceService.remove(+id, req);
   }
 }

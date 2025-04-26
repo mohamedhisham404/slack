@@ -30,7 +30,7 @@ export class UserWorkspace {
   workspace: Workspace;
 
   @Column({ type: 'enum', enum: workspaceRole, default: workspaceRole.MEMBER })
-  role: string;
+  role: workspaceRole;
 
   @CreateDateColumn({
     name: 'joined_at',

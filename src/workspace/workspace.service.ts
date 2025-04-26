@@ -3,7 +3,7 @@ import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Workspace } from './entities/workspace.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { UserWorkspace, workspaceRole } from './entities/user-workspace.entity';
 import { Request } from 'express';
 import { Channels } from 'src/channels/entities/channel.entity';
@@ -13,6 +13,7 @@ import {
 } from 'src/channels/entities/user-channel.entity';
 import { AddUserDto } from './dto/add-user.dto';
 import { User } from 'src/user/entities/user.entity';
+import { handleError } from 'src/utils/errorHandling';
 
 @Injectable()
 export class WorkspaceService {
@@ -88,11 +89,7 @@ export class WorkspaceService {
       await this.userChannelRepo.save(userChannel);
       return savedWorkspace;
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to create workspace');
+      handleError(error);
     }
   }
 
@@ -101,29 +98,13 @@ export class WorkspaceService {
       const { workspace_id, user_id, role } = addUser;
       const currentUserId = req.user.userId;
 
-      const workspace = await this.workSpaceRepo.findOne({
-        where: { id: workspace_id },
-      });
-      if (!workspace) {
-        throw new BadRequestException('Workspace does not exist');
-      }
+      await this.checkWorkspace(workspace_id, currentUserId);
 
       const addedUser = await this.userRepo.findOne({
         where: { id: user_id },
       });
       if (!addedUser) {
         throw new BadRequestException('User does not exist');
-      }
-
-      const currentUserWorkspace = await this.userWorkspaceRepo.find({
-        where: {
-          user: { id: currentUserId },
-          workspace: { id: workspace_id },
-        },
-        relations: ['user', 'workspace'],
-      });
-      if (currentUserWorkspace.length === 0) {
-        throw new BadRequestException('You are not a member of this workspace');
       }
 
       const existingUserworkspace = await this.userWorkspaceRepo.findOne({
@@ -141,47 +122,101 @@ export class WorkspaceService {
       const userWorkspace = this.userWorkspaceRepo.create({
         workspace: { id: workspace_id },
         user: { id: user_id },
-        role: role,
+        role: role as workspaceRole,
       });
       await this.userWorkspaceRepo.save(userWorkspace);
 
-      const channel = await this.channelRepo.findOne({
-        where: { workspace: { id: workspace_id }, name: 'general' },
+      const channels = await this.channelRepo.find({
+        where: {
+          workspace: { id: workspace_id },
+          is_private: false,
+        },
       });
-      const userChannel = this.userChannelRepo.create({
-        channel: { id: channel?.id },
-        user: { id: user_id },
-        role: ChannelRole.MEMBER,
+
+      const userChannels = channels.map((channel) => {
+        return this.userChannelRepo.create({
+          channel: { id: channel.id },
+          user: { id: user_id },
+          role: ChannelRole.MEMBER,
+        });
       });
-      await this.userChannelRepo.save(userChannel);
+
+      await this.userChannelRepo.save(userChannels);
 
       return {
         message: 'User added to workspace successfully',
-        workspace,
         user: addedUser,
       };
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to add user to workspace');
+      handleError(error);
     }
   }
 
-  findAll() {
-    return `This action returns all workspace`;
+  async findOne(id: number) {
+    return await this.workSpaceRepo.findOne({
+      where: { id },
+      relations: {
+        channels: true,
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} workspace`;
+  async update(
+    id: number,
+    updateWorkspaceDto: UpdateWorkspaceDto,
+    req: Request,
+  ) {
+    const userId = req.user.userId;
+    const workspaceUser = await this.userWorkspaceRepo.findOne({
+      where: {
+        user: { id: userId },
+        workspace: { id },
+      },
+    });
+    if (!workspaceUser) {
+      throw new BadRequestException('You are not a member of this workspace');
+    }
+    if (workspaceUser.role !== workspaceRole.ADMIN) {
+      throw new BadRequestException('You are not an admin of this workspace');
+    }
+    return this.workSpaceRepo.update(id, updateWorkspaceDto);
   }
 
-  update(id: number, updateWorkspaceDto: UpdateWorkspaceDto) {
-    return `This action updates a #${id} workspace`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} workspace`;
+  async remove(id: number, req: Request) {
+    const userId = req.user.userId;
+    const workspaceUser = await this.userWorkspaceRepo.findOne({
+      where: {
+        user: { id: userId },
+        workspace: { id },
+      },
+    });
+    if (!workspaceUser) {
+      throw new BadRequestException('You are not a member of this workspace');
+    }
+    if (workspaceUser.role !== workspaceRole.ADMIN) {
+      throw new BadRequestException('You are not an admin of this workspace');
+    }
+    const channels = await this.channelRepo.find({
+      where: {
+        workspace: { id },
+      },
+    });
+    const channelIds = channels.map((channel) => channel.id);
+    await this.userChannelRepo.delete({
+      channel: { id: In(channelIds) },
+      user: { id: userId },
+    });
+    await this.userWorkspaceRepo.delete({
+      workspace: { id },
+      user: { id: userId },
+    });
+    const result = await this.workSpaceRepo.delete(id);
+    if (result.affected === 0) {
+      throw new BadRequestException('Workspace not found');
+    }
+    return {
+      message: 'Workspace deleted successfully',
+      workspaceId: id,
+    };
   }
 }
