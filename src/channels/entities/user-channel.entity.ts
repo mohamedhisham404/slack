@@ -19,16 +19,18 @@ export class UserChannel {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, (user) => user.userChannels)
+  @ManyToOne(() => User, (user) => user.userChannels, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => Channels, (channel) => channel.userChannels)
+  @ManyToOne(() => Channels, (channel) => channel.userChannels, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'channel_id' })
   channel: Channels;
 
   @Column({ type: 'enum', enum: ChannelRole, default: ChannelRole.MEMBER })
-  role: string;
+  role: ChannelRole;
 
   @CreateDateColumn({
     name: 'joined_at',

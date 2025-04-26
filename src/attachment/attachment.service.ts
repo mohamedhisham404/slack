@@ -5,12 +5,25 @@ import { Attachment, AttachmentType } from './entities/attachment.entity';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
+import { UserChannel } from 'src/channels/entities/user-channel.entity';
+import { Request } from 'express';
+import { Channels } from 'src/channels/entities/channel.entity';
+import { handleError } from 'src/utils/errorHandling';
+import { ChannelsService } from 'src/channels/channels.service';
 
 @Injectable()
 export class AttachmentService {
   constructor(
     @InjectRepository(Attachment)
     private attachmentRepository: Repository<Attachment>,
+
+    @InjectRepository(UserChannel)
+    private userChannelRepository: Repository<UserChannel>,
+
+    @InjectRepository(Channels)
+    private channelRepository: Repository<Channels>,
+
+    private readonly channelsService: ChannelsService,
   ) {}
 
   private readonly uploadPath = path.join(__dirname, '../../uploads');
@@ -52,65 +65,100 @@ export class AttachmentService {
 
       return await this.attachmentRepository.save(attachment);
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
+      handleError(error);
+    }
+  }
+
+  async findAllByChannel(channel_id: number, req: Request) {
+    try {
+      const user_id = req.user.userId;
+      await this.channelsService.checkTheChannel(channel_id, user_id);
+
+      const attachments = await this.attachmentRepository.find({
+        where: {
+          message: { channel: { id: channel_id } },
+        },
+        relations: {
+          message: {
+            channel: true,
+            user: true,
+          },
+        },
+      });
+
+      if (!attachments || attachments.length === 0) {
+        throw new BadRequestException('Attachments not found');
       }
 
-      throw new BadRequestException('Failed to add message');
+      return attachments;
+    } catch (error: unknown) {
+      handleError(error);
     }
   }
 
-  async findAll() {
-    const res = await this.attachmentRepository.find({
-      relations: {
-        message: true,
-      },
-    });
-
-    if (!res) {
-      throw new BadRequestException('Attachments not found');
-    }
-    return res;
-  }
-
-  async findOne(id: number) {
-    const res = await this.attachmentRepository.findOne({
-      where: { id },
-      relations: {
-        message: true,
-      },
-    });
-
-    if (!res) {
-      throw new BadRequestException('Attachment not found');
-    }
-    return res;
-  }
-
-  async remove(id: number) {
+  async findOneByChannel(
+    channel_id: number,
+    attachment_id: number,
+    req: Request,
+  ) {
     try {
+      const user_id = req.user.userId;
+      await this.channelsService.checkTheChannel(channel_id, user_id);
+
       const attachment = await this.attachmentRepository.findOne({
-        where: { id },
+        where: {
+          id: attachment_id,
+          message: { channel: { id: channel_id } },
+        },
+        relations: {
+          message: {
+            channel: true,
+            user: true,
+          },
+        },
       });
 
       if (!attachment) {
-        throw new BadRequestException(`Attachment with ID ${id} not found`);
+        throw new BadRequestException('Attachment not found');
+      }
+
+      return attachment;
+    } catch (error: unknown) {
+      handleError(error);
+    }
+  }
+
+  async remove(channel_id: number, attachment_id: number, req: Request) {
+    const user_id = req.user.userId;
+    await this.channelsService.checkTheChannel(channel_id, user_id);
+
+    try {
+      const attachment = await this.attachmentRepository.findOne({
+        where: { id: attachment_id },
+      });
+
+      if (!attachment) {
+        throw new BadRequestException(
+          `Attachment with ID ${attachment_id} not found`,
+        );
       }
 
       const filePath = attachment.url;
       if (fs.existsSync(filePath)) {
         await fs.promises.unlink(filePath);
+      } else {
+        throw new BadRequestException(
+          `File with path ${filePath} does not exist`,
+        );
       }
 
-      await this.attachmentRepository.delete(id);
+      await this.attachmentRepository.delete(attachment_id);
 
-      return { message: `Attachment with ID ${id} deleted successfully.` };
+      return {
+        message: `Attachment with ID ${attachment_id} deleted successfully.`,
+      };
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to delete attachment');
+      handleError(error);
     }
   }
 }

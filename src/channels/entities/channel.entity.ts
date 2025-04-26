@@ -47,11 +47,11 @@ export class Channels {
   @Column({ default: false })
   is_dm: boolean;
 
+  @Column({ default: false })
+  admin_only: boolean;
+
   @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  deleted_at: Date;
 
   @OneToMany(() => UserChannel, (userChannel) => userChannel.channel)
   userChannels: UserChannel[];

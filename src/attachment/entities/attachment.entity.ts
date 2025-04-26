@@ -16,7 +16,7 @@ export class Attachment {
   @Column()
   message_id: number;
 
-  @ManyToOne(() => Message)
+  @ManyToOne(() => Message, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'message_id' })
   message: Message;
 

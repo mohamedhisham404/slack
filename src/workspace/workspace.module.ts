@@ -20,5 +20,6 @@ import { User } from 'src/user/entities/user.entity';
   ],
   controllers: [WorkspaceController],
   providers: [WorkspaceService],
+  exports: [WorkspaceService],
 })
 export class WorkspaceModule {}

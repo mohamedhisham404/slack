@@ -29,28 +29,53 @@ export class ChannelsController {
     return this.channelsService.create(createChannelDto, req);
   }
 
-  @Post('/add_user')
+  @Post('user')
   async addUser(@Body() addUser: AddUserDto, @Req() req: Request) {
     return this.channelsService.addUser(addUser, req);
   }
 
-  @Get()
-  findAll() {
-    return this.channelsService.findAll();
+  @Get('workspace/:workspace_id')
+  async findAllByWorkspace(
+    @Param('workspace_id') workspace_id: string,
+    @Req() req: Request,
+  ) {
+    return this.channelsService.findAllByWorkspace(+workspace_id, req);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.channelsService.findOne(+id);
+  @Get(':channelid/workspace/:workspaceid')
+  async findOneByWorkspace(
+    @Param('channelid') channelid: string,
+    @Param('workspaceid') workspaceid: string,
+    @Req() req: Request,
+  ) {
+    return this.channelsService.findOneByWorkspace(
+      +channelid,
+      +workspaceid,
+      req,
+    );
+  }
+
+  @Get('dm')
+  async findAllDM(@Req() req: Request) {
+    return this.channelsService.findAllDM(req);
+  }
+
+  @Get('dm/:id')
+  async findOneDM(@Param('id') id: string, @Req() req: Request) {
+    return this.channelsService.findOneDM(+id, req);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateChannelDto: UpdateChannelsDto) {
-    return this.channelsService.update(+id, updateChannelDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateChannelDto: UpdateChannelsDto,
+    @Req() req: Request,
+  ) {
+    return this.channelsService.update(+id, updateChannelDto, req);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.channelsService.remove(+id);
+  async remove(@Param('id') id: string, @Req() req: Request) {
+    return this.channelsService.remove(+id, req);
   }
 }

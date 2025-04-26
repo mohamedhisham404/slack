@@ -33,6 +33,30 @@ export class WorkspaceService {
     private readonly userRepo: Repository<User>,
   ) {}
 
+  async checkWorkspace(workspace_id: number, user_id: number) {
+    const workspace = await this.workSpaceRepo.findOne({
+      where: {
+        id: workspace_id,
+      },
+    });
+    if (!workspace) {
+      throw new BadRequestException('Workspace not found');
+    }
+
+    const userWorkspace = await this.userWorkspaceRepo.findOne({
+      where: {
+        workspace: { id: workspace_id },
+        user: { id: user_id },
+      },
+    });
+
+    if (!userWorkspace) {
+      throw new BadRequestException(
+        'You must be a member of the workspace to do action to a channel',
+      );
+    }
+  }
+
   async create(createWorkspaceDto: CreateWorkspaceDto, req: Request) {
     try {
       const userId = req.user.userId;

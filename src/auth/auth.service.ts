@@ -13,6 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import { setCookies } from 'src/utils/setCookies';
 import { Request, Response } from 'express';
 import { JwtPayload } from '../types/jwt-payload.interface';
+import { handleError } from 'src/utils/errorHandling';
 
 @Injectable()
 export class AuthService {
@@ -64,11 +65,7 @@ export class AuthService {
         success: true,
       });
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to signup');
+      handleError(error);
     }
   }
 
@@ -98,11 +95,7 @@ export class AuthService {
         success: true,
       });
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to signup');
+      handleError(error);
     }
   }
 
@@ -139,11 +132,7 @@ export class AuthService {
         success: true,
       });
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to signup');
+      handleError(error);
     }
   }
 
@@ -158,17 +147,18 @@ export class AuthService {
         success: true,
       });
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to signup');
+      handleError(error);
     }
   }
-
-  generateToken(userId: number) {
-    const accessToken = this.jwtService.sign({ userId }, { expiresIn: '1h' });
-    const refreshToken = this.jwtService.sign({ userId }, { expiresIn: '7d' });
+  private generateToken(userId: number) {
+    const accessToken = this.jwtService.sign(
+      { userId },
+      { expiresIn: process.env.ACCESS_EXPIRES_IN },
+    );
+    const refreshToken = this.jwtService.sign(
+      { userId },
+      { expiresIn: process.env.REFRESH_EXPIRES_IN },
+    );
     return {
       accessToken,
       refreshToken,

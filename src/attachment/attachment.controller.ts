@@ -9,6 +9,7 @@ import {
   UploadedFile,
   BadRequestException,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { AttachmentService } from './attachment.service';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
@@ -16,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AuthGuard } from 'src/guards/auth.guards';
+import { Request } from 'express';
 
 @Controller('attachment')
 @UseGuards(AuthGuard)
@@ -49,18 +51,33 @@ export class AttachmentController {
     return this.attachmentService.create(file, createAttachmentDto);
   }
 
-  @Get()
-  async findAll() {
-    return this.attachmentService.findAll();
+  @Get('channel/:channel_id')
+  async findAllByChannel(
+    @Param('channel_id') channel_id: string,
+    @Req() req: Request,
+  ) {
+    return this.attachmentService.findAllByChannel(+channel_id, req);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.attachmentService.findOne(+id);
+  @Get(':attachment_id/channel/:channel_id')
+  async findOneByChannel(
+    @Param('channel_id') channelId: string,
+    @Param('attachment_id') attachmentId: string,
+    @Req() req: Request,
+  ) {
+    return this.attachmentService.findOneByChannel(
+      +channelId,
+      +attachmentId,
+      req,
+    );
   }
 
-  @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return this.attachmentService.remove(+id);
+  @Delete(':attachment_id/channel/:channel_id')
+  async remove(
+    @Param('channel_id') channelId: string,
+    @Param('attachment_id') attachmentId: string,
+    @Req() req: Request,
+  ) {
+    return this.attachmentService.remove(+channelId, +attachmentId, req);
   }
 }
