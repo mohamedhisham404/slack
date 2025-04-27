@@ -10,6 +10,7 @@ import {
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { User } from 'src/user/entities/user.entity';
 import { UserChannel } from './user-channel.entity';
+import { Emojy } from 'src/emojy/entities/emojy.entity';
 
 @Entity()
 export class Channels {
@@ -55,4 +56,7 @@ export class Channels {
 
   @OneToMany(() => UserChannel, (userChannel) => userChannel.channel)
   userChannels: UserChannel[];
+
+  @OneToMany(() => Emojy, (emojy) => emojy.channel)
+  emojis: Emojy[];
 }

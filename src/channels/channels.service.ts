@@ -113,6 +113,27 @@ export class ChannelsService {
       });
       await this.userChannelRepo.save(userChannel);
 
+      if (is_private === false || is_private === undefined) {
+        const workspaceUsers = await this.userWorkspaceRepo.find({
+          where: { workspace: { id: workspace_id } },
+          relations: ['user'],
+        });
+
+        const userChannels = workspaceUsers
+          .filter((uw) => uw.user.id !== userId)
+          .map((uw) =>
+            this.userChannelRepo.create({
+              channel: { id: savedChannel.id },
+              user: { id: uw.user.id },
+              role: ChannelRole.MEMBER,
+            }),
+          );
+
+        if (userChannels.length > 0) {
+          await this.userChannelRepo.save(userChannels);
+        }
+      }
+
       return savedChannel;
     } catch (error: unknown) {
       handleError(error);

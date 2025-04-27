@@ -9,7 +9,6 @@ import { UserPreferencesModule } from './user-preferences/user-preferences.modul
 import { ChannelsModule } from './channels/channels.module';
 import { MessageModule } from './message/message.module';
 import { AttachmentModule } from './attachment/attachment.module';
-import { MentionsModule } from './mentions/mentions.module';
 import { EmojyModule } from './emojy/emojy.module';
 import { NotificationChannelModule } from './notification-channel/notification-channel.module';
 import { NotificationWorkspaceModule } from './notification-workspace/notification-workspace.module';
@@ -36,7 +35,6 @@ import config from './config/config';
     ChannelsModule,
     MessageModule,
     AttachmentModule,
-    MentionsModule,
     EmojyModule,
     NotificationChannelModule,
     NotificationWorkspaceModule,
