@@ -7,6 +7,7 @@ import { UserWorkspace } from './entities/user-workspace.entity';
 import { Channels } from 'src/channels/entities/channel.entity';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { User } from 'src/user/entities/user.entity';
       Channels,
       UserChannel,
       User,
+      NotificationWorkspace,
     ]),
   ],
   controllers: [WorkspaceController],

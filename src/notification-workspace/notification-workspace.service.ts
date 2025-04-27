@@ -1,26 +1,50 @@
 import { Injectable } from '@nestjs/common';
-import { CreateNotificationWorkspaceDto } from './dto/create-notification-workspace.dto';
 import { UpdateNotificationWorkspaceDto } from './dto/update-notification-workspace.dto';
+import { Request } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { NotificationWorkspace } from './entities/notification-workspace.entity';
+import { Repository } from 'typeorm';
+import { handleError } from 'src/utils/errorHandling';
 
 @Injectable()
 export class NotificationWorkspaceService {
-  create(createNotificationWorkspaceDto: CreateNotificationWorkspaceDto) {
-    return 'This action adds a new notificationWorkspace';
+  constructor(
+    @InjectRepository(NotificationWorkspace)
+    private readonly notificationWorkspaceRepository: Repository<NotificationWorkspace>,
+  ) {}
+
+  async findOne(req: Request) {
+    try {
+      const userId = req.user.userId;
+
+      const notificationWorkspace =
+        await this.notificationWorkspaceRepository.findOne({
+          where: { user_id: userId },
+        });
+
+      return notificationWorkspace;
+    } catch (error) {
+      handleError(error);
+    }
   }
 
-  findAll() {
-    return `This action returns all notificationWorkspace`;
-  }
+  async update(
+    req: Request,
+    updateNotificationWorkspaceDto: UpdateNotificationWorkspaceDto,
+  ) {
+    try {
+      const userId = req.user.userId;
 
-  findOne(id: number) {
-    return `This action returns a #${id} notificationWorkspace`;
-  }
+      await this.notificationWorkspaceRepository.update(
+        { user_id: userId },
+        updateNotificationWorkspaceDto,
+      );
 
-  update(id: number, updateNotificationWorkspaceDto: UpdateNotificationWorkspaceDto) {
-    return `This action updates a #${id} notificationWorkspace`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} notificationWorkspace`;
+      return await this.notificationWorkspaceRepository.findOne({
+        where: { user_id: userId },
+      });
+    } catch (error) {
+      handleError(error);
+    }
   }
 }

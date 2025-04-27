@@ -18,6 +18,7 @@ import {
 import { AddUserDto } from './dto/add-user.dto';
 import { User } from 'src/user/entities/user.entity';
 import { handleError } from 'src/utils/errorHandling';
+import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
 
 @Injectable()
 export class WorkspaceService {
@@ -36,6 +37,9 @@ export class WorkspaceService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    @InjectRepository(NotificationWorkspace)
+    private readonly notificationWorkspaceRepo: Repository<NotificationWorkspace>,
   ) {}
 
   async checkWorkspace(workspace_id: number, user_id: number) {
@@ -146,6 +150,13 @@ export class WorkspaceService {
       });
 
       await this.userChannelRepo.save(userChannels);
+
+      await this.notificationWorkspaceRepo.save({
+        user_id: user_id,
+        workspace_id: workspace_id,
+        admin_notifications: true,
+        huddle_notifications: true,
+      });
 
       return {
         message: 'User added to workspace successfully',
@@ -277,6 +288,11 @@ export class WorkspaceService {
       workspace: { id },
       user: { id: userId },
     });
+
+    await this.notificationWorkspaceRepo.delete({
+      workspace_id: id,
+    });
+
     const result = await this.workSpaceRepo.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException('Workspace not found');

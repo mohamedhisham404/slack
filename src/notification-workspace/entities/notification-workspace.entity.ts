@@ -27,10 +27,10 @@ export class NotificationWorkspace {
   @JoinColumn({ name: 'workspace_id' })
   workspace: Workspace;
 
-  @Column({ default: false })
+  @Column({ default: true })
   admin_notifications: boolean;
 
-  @Column({ default: false })
+  @Column({ default: true })
   huddle_notifications: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
