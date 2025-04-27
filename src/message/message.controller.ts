@@ -16,6 +16,7 @@ import {
 } from './dto/create-message.dto';
 import { Request } from 'express';
 import { AuthGuard } from 'src/guards/auth.guards';
+import { UpdateMessageDto } from './dto/update-message.dto';
 
 @UseGuards(AuthGuard)
 @Controller('message')
@@ -41,23 +42,50 @@ export class MessageController {
     return this.messageService.createUserMessage(CreateDMMessageDTO, req);
   }
 
-  @Get()
-  findAll() {
-    return this.messageService.findAll();
+  @Get(':channelId')
+  async getAllMessagesOfChannel(
+    @Param('channelId') channelId: string,
+    @Req() req: Request,
+  ) {
+    return this.messageService.getAllMessagesOfChannel(+channelId, req);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.messageService.findOne(+id);
+  @Get(':messageId/channel/:channelId')
+  async findOne(
+    @Param('messageId') messageId: string,
+    @Param('channelId') channelId: string,
+    @Req() req: Request,
+  ) {
+    return this.messageService.findOne(+messageId, +channelId, req);
   }
 
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateMessageDto: UpdateMessageDto) {
-  //   return this.messageService.update(+id, updateMessageDto);
-  // }
+  @Patch(':messageId/channel/:channelId')
+  async update(
+    @Param('messageId') messageId: string,
+    @Param('channelId') channelId: string,
+    @Body() updateMessageDto: UpdateMessageDto,
+    @Req() req: Request,
+  ) {
+    return this.messageService.update(
+      +messageId,
+      +channelId,
+      updateMessageDto,
+      req,
+    );
+  }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.messageService.remove(+id);
+  @Delete(':messageId/channel/:channelId')
+  async remove(
+    @Param('messageId') messageId: string,
+    @Param('channelId') channelId: string,
+    @Body() updateMessageDto: UpdateMessageDto,
+    @Req() req: Request,
+  ) {
+    return this.messageService.remove(
+      +messageId,
+      +channelId,
+      updateMessageDto,
+      req,
+    );
   }
 }

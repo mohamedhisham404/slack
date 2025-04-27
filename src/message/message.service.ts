@@ -19,6 +19,8 @@ import {
   UserChannel,
 } from 'src/channels/entities/user-channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { UpdateMessageDto } from './dto/update-message.dto';
+import { handleError } from 'src/utils/errorHandling';
 
 @Injectable()
 export class MessageService {
@@ -44,61 +46,65 @@ export class MessageService {
     CreateChannelMessageDto: CreateChannelMessageDto,
     req: Request,
   ) {
-    const { content, channel_id, parent_message_id, is_pinned, attachments } =
-      CreateChannelMessageDto;
-    const userId = req.user.userId;
+    try {
+      const { content, channel_id, parent_message_id, is_pinned, attachments } =
+        CreateChannelMessageDto;
+      const userId = req.user.userId;
 
-    if (!content && !attachments) {
-      throw new BadRequestException(
-        'Message content or attachments are required',
-      );
-    }
+      if (!content && !attachments) {
+        throw new BadRequestException(
+          'Message content or attachments are required',
+        );
+      }
 
-    const channel = await this.channelsRepo.findOne({
-      where: { id: channel_id },
-    });
-    if (!channel) {
-      throw new NotFoundException('Channel not found');
-    }
+      const channel = await this.channelsRepo.findOne({
+        where: { id: channel_id },
+      });
+      if (!channel) {
+        throw new NotFoundException('Channel not found');
+      }
 
-    const userChannel = await this.userChannelRepo.findOne({
-      where: {
+      const userChannel = await this.userChannelRepo.findOne({
+        where: {
+          channel: { id: channel_id },
+          user: { id: userId },
+        },
+      });
+      if (!userChannel) {
+        throw new BadRequestException('you are not in this channel');
+      }
+
+      if (parent_message_id) {
+        const parentMessage = await this.messageRepo.findOne({
+          where: { id: parent_message_id },
+        });
+        if (!parentMessage) {
+          throw new NotFoundException('Parent message not found');
+        }
+        parentMessage.reply_count += 1;
+        await this.messageRepo.save(parentMessage);
+      }
+
+      if (channel.admin_only && userChannel.role !== ChannelRole.ADMIN) {
+        throw new BadRequestException(
+          'Only admins can send messages in this channel',
+        );
+      }
+
+      const message = this.messageRepo.create({
+        content,
+        is_pinned,
+        parent_message: parent_message_id,
         channel: { id: channel_id },
         user: { id: userId },
-      },
-    });
-    if (!userChannel) {
-      throw new BadRequestException('you are not in this channel');
-    }
-
-    if (parent_message_id) {
-      const parentMessage = await this.messageRepo.findOne({
-        where: { id: parent_message_id },
       });
-      if (!parentMessage) {
-        throw new NotFoundException('Parent message not found');
-      }
-      parentMessage.reply_count += 1;
-      await this.messageRepo.save(parentMessage);
+      const savedMessage = await this.messageRepo.save(message);
+
+      this.eventsGateway.sendMessageToChannel(channel_id, message);
+      return savedMessage;
+    } catch (error) {
+      handleError(error);
     }
-
-    if (channel.admin_only && userChannel.role !== ChannelRole.ADMIN) {
-      throw new BadRequestException(
-        'Only admins can send messages in this channel',
-      );
-    }
-
-    const message = this.messageRepo.create({
-      content,
-      is_pinned,
-      parent_message: parent_message_id,
-      channel: { id: channel_id },
-      user: { id: userId },
-    });
-    const savedMessage = await this.messageRepo.save(message);
-
-    this.eventsGateway.sendMessageToChannel(channel_id, message);
-    return savedMessage;
   }
 
   async createUserMessage(
@@ -199,23 +205,132 @@ export class MessageService {
       this.eventsGateway.sendDirectMessage(receiver_id, message);
       return savedMessage;
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
-      }
-
-      throw new BadRequestException('Failed to add message');
+      handleError(error);
     }
   }
 
-  findAll() {
-    return `This action returns all message`;
+  async getAllMessagesOfChannel(channelId: number, req: Request) {
+    try {
+      const userId = req.user.userId;
+
+      await this.channelsService.checkTheChannel(channelId, userId);
+
+      const messages = await this.messageRepo
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.user', 'user')
+        .where('message.channel_id = :channelId', { channelId })
+        .orderBy('message.created_at', 'DESC')
+        .getMany();
+
+      if (!messages) {
+        throw new NotFoundException('No messages found in this channel');
+      }
+      return messages.map((message) => ({
+        ...message,
+        user: {
+          id: message.user.id,
+          name: message.user.name,
+          avatar: message.user.profile_photo,
+          is_active: message.user.is_active,
+        },
+      }));
+    } catch (error) {
+      handleError(error);
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} message`;
+  async findOne(messageId: number, channelId: number, req: Request) {
+    try {
+      const userId = req.user.userId;
+      await this.channelsService.checkTheChannel(channelId, userId);
+      const message = await this.messageRepo
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.user', 'user')
+        .where('message.id = :messageId', { messageId })
+        .andWhere('message.channel_id = :channelId', { channelId })
+        .getOne();
+      if (!message) {
+        throw new NotFoundException('Message not found');
+      }
+      return {
+        ...message,
+        user: {
+          id: message.user.id,
+          name: message.user.name,
+          avatar: message.user.profile_photo,
+          is_active: message.user.is_active,
+        },
+      };
+    } catch (error) {
+      handleError(error);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} message`;
+  async update(
+    messageId: number,
+    channelId: number,
+    updateMessageDto: UpdateMessageDto,
+    req: Request,
+  ) {
+    const userId = req.user.userId;
+    await this.channelsService.checkTheChannel(channelId, userId);
+
+    const message = await this.messageRepo.findOne({
+      where: { id: messageId, channel: { id: channelId } },
+      relations: ['user'],
+    });
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (message.deleted_at) {
+      throw new BadRequestException('Message is deleted');
+    }
+    if (message.user.id !== userId) {
+      throw new BadRequestException('You are not the owner of this message');
+    }
+    if (updateMessageDto.content) {
+      message.content = updateMessageDto.content;
+    }
+    if (updateMessageDto.is_pinned !== undefined) {
+      message.is_pinned = updateMessageDto.is_pinned;
+    }
+
+    message.updated_at = new Date();
+    const updatedMessage = await this.messageRepo.save(message);
+    return {
+      ...updatedMessage,
+    };
+  }
+
+  async remove(
+    messageId: number,
+    channelId: number,
+    updateMessageDto: UpdateMessageDto,
+    req: Request,
+  ) {
+    const userId = req.user.userId;
+    await this.channelsService.checkTheChannel(channelId, userId);
+
+    const message = await this.messageRepo.findOne({
+      where: { id: messageId, channel: { id: channelId } },
+      relations: ['user'],
+    });
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (message.deleted_at) {
+      throw new BadRequestException('Message is already deleted');
+    }
+    if (message.user.id !== userId) {
+      throw new BadRequestException('You are not the owner of this message');
+    }
+
+    message.deleted_at = new Date();
+    await this.messageRepo.save(message);
+    return {
+      message: 'Message deleted successfully',
+    };
   }
 }

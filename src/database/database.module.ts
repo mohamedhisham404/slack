@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Logger, Module, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectConnection, TypeOrmModule } from '@nestjs/typeorm';
 import { Connection } from 'typeorm';
@@ -26,9 +26,9 @@ export class DatabaseModule implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.connection.query('SELECT 1');
-      console.log('Database connected successfully');
+      Logger.log('Database connected successfully');
     } catch (error) {
-      console.error('Database connection failed', error);
+      Logger.error('Database connection failed', error);
     }
   }
 }
