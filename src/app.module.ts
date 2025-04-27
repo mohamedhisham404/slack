@@ -10,7 +10,6 @@ import { ChannelsModule } from './channels/channels.module';
 import { MessageModule } from './message/message.module';
 import { AttachmentModule } from './attachment/attachment.module';
 import { EmojyModule } from './emojy/emojy.module';
-import { NotificationChannelModule } from './notification-channel/notification-channel.module';
 import { NotificationWorkspaceModule } from './notification-workspace/notification-workspace.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
@@ -36,7 +35,6 @@ import config from './config/config';
     MessageModule,
     AttachmentModule,
     EmojyModule,
-    NotificationChannelModule,
     NotificationWorkspaceModule,
     AuthModule,
     EventsModule,

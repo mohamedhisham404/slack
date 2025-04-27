@@ -7,10 +7,16 @@ import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { ChannelsModule } from 'src/channels/channels.module';
 import { WorkspaceModule } from 'src/workspace/workspace.module';
 import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
+import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, UserChannel, UserWorkspace]),
+    TypeOrmModule.forFeature([
+      User,
+      UserChannel,
+      UserWorkspace,
+      UserPreferences,
+    ]),
     ChannelsModule,
     WorkspaceModule,
   ],

@@ -35,9 +35,6 @@ export class Message {
   @JoinColumn({ name: 'channel_id' })
   channel: Channels;
 
-  @Column({ default: false })
-  is_updated: boolean;
-
   @Column({ default: 0 })
   reply_count: number;
 

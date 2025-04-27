@@ -5,6 +5,7 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { Message } from 'src/message/entities/message.entity';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
@@ -13,6 +14,7 @@ import { Exclude } from 'class-transformer';
 
 @Entity()
 export class User {
+  @Index()
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -41,9 +43,6 @@ export class User {
   @Column({ nullable: true })
   about_me: string;
 
-  @Column({ type: 'timestamp', nullable: true })
-  last_login: Date;
-
   @CreateDateColumn()
   created_at: Date;
 
@@ -52,9 +51,6 @@ export class User {
 
   @Column({ default: false })
   is_premium: boolean;
-
-  @Column({ type: 'timestamp', nullable: true })
-  deleted_at: Date;
 
   @OneToMany(() => Message, (message) => message.user)
   messages: Message[];

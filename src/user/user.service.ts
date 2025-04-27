@@ -14,6 +14,7 @@ import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 import { WorkspaceService } from 'src/workspace/workspace.service';
 import { handleError } from 'src/utils/errorHandling';
 import { plainToInstance } from 'class-transformer';
+import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
 
 @Injectable()
 export class UserService {
@@ -26,6 +27,9 @@ export class UserService {
 
     @InjectRepository(UserWorkspace)
     private readonly usersWorkspaceRepository: Repository<UserWorkspace>,
+
+    @InjectRepository(UserPreferences)
+    private readonly userPreferencesRepository: Repository<UserPreferences>,
 
     private readonly channelService: ChannelsService,
     private readonly workspaceService: WorkspaceService,
@@ -164,6 +168,10 @@ export class UserService {
       });
 
       await this.userChannelRepository.delete({ user: { id: currentUserId } });
+
+      await this.userPreferencesRepository.delete({
+        user_id: currentUserId,
+      });
 
       const user = await this.userRepository.findOne({
         where: { id: currentUserId },

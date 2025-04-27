@@ -1,26 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserPreferencesDto } from './dto/create-user-preference.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserPreferenceDto } from './dto/update-user-preference.dto';
+import { Request } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UserPreferences } from './entities/user-preference.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class UserPreferencesService {
-  create(createUserPreferenceDto: CreateUserPreferencesDto) {
-    return 'This action adds a new userPreference';
+  constructor(
+    @InjectRepository(UserPreferences)
+    private readonly userPreferencesRepo: Repository<UserPreferences>,
+  ) {}
+
+  async findOne(req: Request) {
+    const userId = req.user.userId;
+
+    const userPreferences = await this.userPreferencesRepo.findOne({
+      where: { user_id: userId },
+    });
+
+    return userPreferences;
   }
 
-  findAll() {
-    return `This action returns all userPreferences`;
-  }
+  async update(req: Request, updateUserPreferenceDto: UpdateUserPreferenceDto) {
+    const userId = req.user.userId;
 
-  findOne(id: number) {
-    return `This action returns a #${id} userPreference`;
-  }
+    const preferences = await this.userPreferencesRepo.findOne({
+      where: { user_id: userId },
+    });
 
-  update(id: number, updateUserPreferenceDto: UpdateUserPreferenceDto) {
-    return `This action updates a #${id} userPreference`;
-  }
+    if (!preferences) {
+      throw new NotFoundException('Preferences not found');
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} userPreference`;
+    Object.assign(preferences, updateUserPreferenceDto);
+    return this.userPreferencesRepo.save(preferences);
   }
 }

@@ -28,7 +28,7 @@ export class NotificationWorkspace {
   workspace: Workspace;
 
   @Column({ default: false })
-  VIP_notifications: boolean;
+  admin_notifications: boolean;
 
   @Column({ default: false })
   huddle_notifications: boolean;

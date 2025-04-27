@@ -7,6 +7,23 @@ import {
 } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
 
+export enum UserLanguage {
+  ENGLISH = 'en',
+  ARABIC = 'ar',
+}
+
+export enum UserTheme {
+  LIGHT = 'light',
+  DARK = 'dark',
+}
+
+export enum UserColorMode {
+  DEFAULT = 'default',
+  COLORFUL = 'colorful',
+  RED = 'red',
+  BLUE = 'blue',
+}
+
 @Entity()
 export class UserPreferences {
   @PrimaryGeneratedColumn()
@@ -22,12 +39,24 @@ export class UserPreferences {
   @Column({ type: 'text', nullable: true })
   time_zone: string;
 
-  @Column({ type: 'enum', enum: ['light', 'dark'], default: 'light' })
-  color_mode: string;
+  @Column({
+    type: 'enum',
+    enum: UserColorMode,
+    default: UserColorMode.DEFAULT,
+  })
+  color_mode: UserColorMode;
 
-  @Column({ type: 'text', nullable: true })
-  theme: string;
+  @Column({
+    type: 'enum',
+    enum: UserTheme,
+    default: UserTheme.LIGHT,
+  })
+  theme: UserTheme;
 
-  @Column({ type: 'text', nullable: true })
-  language: string;
+  @Column({
+    type: 'enum',
+    enum: UserLanguage,
+    default: UserLanguage.ENGLISH,
+  })
+  language: UserLanguage;
 }

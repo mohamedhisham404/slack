@@ -10,7 +10,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Channels } from './entities/channel.entity';
 import { ChannelRole, UserChannel } from './entities/user-channel.entity';
-import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { AddUserDto } from './dto/add-user.dto';
 import { User } from 'src/user/entities/user.entity';
 import { handleError } from 'src/utils/errorHandling';
@@ -20,9 +19,6 @@ import { WorkspaceService } from 'src/workspace/workspace.service';
 @Injectable()
 export class ChannelsService {
   constructor(
-    @InjectRepository(Workspace)
-    private readonly workSpaceRepo: Repository<Workspace>,
-
     @InjectRepository(Channels)
     private readonly channelRepo: Repository<Channels>,
 

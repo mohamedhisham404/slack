@@ -14,12 +14,17 @@ import { setCookies } from 'src/utils/setCookies';
 import { Request, Response } from 'express';
 import { JwtPayload } from '../types/jwt-payload.interface';
 import { handleError } from 'src/utils/errorHandling';
+import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+
+    @InjectRepository(UserPreferences)
+    private readonly userPreferencesRepository: Repository<UserPreferences>,
+
     private jwtService: JwtService,
   ) {}
 
@@ -55,6 +60,10 @@ export class AuthService {
       });
 
       await this.userRepository.save(user);
+
+      await this.userPreferencesRepository.save({
+        user_id: user.id,
+      });
 
       const { accessToken, refreshToken } = this.generateToken(user.id);
       setCookies(res, accessToken, refreshToken);

@@ -1,15 +1,7 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Body, Patch, Req } from '@nestjs/common';
 import { UserPreferencesService } from './user-preferences.service';
-import { CreateUserPreferencesDto } from './dto/create-user-preference.dto';
 import { UpdateUserPreferenceDto } from './dto/update-user-preference.dto';
+import { Request } from 'express';
 
 @Controller('user-preferences')
 export class UserPreferencesController {
@@ -17,31 +9,16 @@ export class UserPreferencesController {
     private readonly userPreferencesService: UserPreferencesService,
   ) {}
 
-  @Post()
-  create(@Body() createUserPreferenceDto: CreateUserPreferencesDto) {
-    return this.userPreferencesService.create(createUserPreferenceDto);
-  }
-
   @Get()
-  findAll() {
-    return this.userPreferencesService.findAll();
+  async findOne(@Req() req: Request) {
+    return this.userPreferencesService.findOne(req);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userPreferencesService.findOne(+id);
-  }
-
-  @Patch(':id')
+  @Patch()
   update(
-    @Param('id') id: string,
+    @Req() req: Request,
     @Body() updateUserPreferenceDto: UpdateUserPreferenceDto,
   ) {
-    return this.userPreferencesService.update(+id, updateUserPreferenceDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userPreferencesService.remove(+id);
+    return this.userPreferencesService.update(req, updateUserPreferenceDto);
   }
 }
