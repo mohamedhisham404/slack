@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateEmojyDto } from './dto/create-emojy.dto';
 import { Request } from 'express';
-import { ChannelsService } from 'src/channels/channels.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Emojy } from './entities/emojy.entity';
 import { Repository } from 'typeorm';
@@ -9,10 +8,13 @@ import { handleError } from 'src/utils/errorHandling';
 import { CreateMessageReactionDto } from './dto/create-message-emojy.dto';
 import { Message } from 'src/message/entities/message.entity';
 import { MessageReaction } from 'src/message/entities/message-reaction.entity';
+import { WorkspaceService } from 'src/workspace/workspace.service';
+import { ChannelsService } from 'src/channels/channels.service';
 
 @Injectable()
 export class EmojyService {
   constructor(
+    private readonly WorkspaceService: WorkspaceService,
     private readonly channelsService: ChannelsService,
 
     @InjectRepository(Emojy)
@@ -27,17 +29,17 @@ export class EmojyService {
 
   async create(
     createEmojyDto: CreateEmojyDto,
-    channelId: number,
+    workspaceId: number,
     req: Request,
   ) {
     try {
       const userId = req.user.userId;
-      await this.channelsService.checkTheChannel(channelId, userId);
+      await this.WorkspaceService.checkWorkspace(workspaceId, userId);
 
       const emojy = this.emojyRepository.create({
         name: createEmojyDto.name,
-        channel: { id: channelId },
         unicode: createEmojyDto.unicode,
+        workspace: { id: workspaceId },
       });
 
       const emojyCreated = await this.emojyRepository.save(emojy);
@@ -47,39 +49,43 @@ export class EmojyService {
     }
   }
 
-  async findAll(channelId: number, req: Request) {
-    const userId = req.user.userId;
-    await this.channelsService.checkTheChannel(channelId, userId);
-
-    const emojies = await this.emojyRepository.find({
-      where: { channel: { id: channelId } },
-      relations: ['channel'],
-      select: {
-        id: true,
-        name: true,
-        unicode: true,
-      },
-    });
-
-    if (!emojies) {
-      throw new NotFoundException('No emojies found');
-    }
-
-    return emojies;
-  }
-
-  async findOne(emojyId: number, channelId: number, req: Request) {
+  async findAll(workspaceId: number, req: Request) {
     try {
       const userId = req.user.userId;
-      await this.channelsService.checkTheChannel(channelId, userId);
+      await this.WorkspaceService.checkWorkspace(workspaceId, userId);
+
+      const emojies = await this.emojyRepository.find({
+        where: { workspace: { id: workspaceId } },
+        relations: ['workspace'],
+        select: {
+          id: true,
+          name: true,
+          unicode: true,
+        },
+      });
+
+      if (!emojies || emojies.length === 0) {
+        throw new NotFoundException('No emojis found');
+      }
+
+      return emojies;
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  async findOne(emojyId: number, workspaceId: number, req: Request) {
+    try {
+      const userId = req.user.userId;
+      await this.WorkspaceService.checkWorkspace(workspaceId, userId);
 
       const emojy = await this.emojyRepository.findOne({
-        where: { id: emojyId, channel: { id: channelId } },
-        relations: ['channel'],
+        where: { id: emojyId, workspace: { id: workspaceId } },
+        relations: ['workspace'],
       });
 
       if (!emojy) {
-        throw new NotFoundException('Emojy not found');
+        throw new NotFoundException('Emoji not found');
       }
 
       return emojy;
@@ -89,12 +95,12 @@ export class EmojyService {
   }
 
   async setEmojyToMessage(
-    CreateMessageReactionDto: CreateMessageReactionDto,
+    createMessageReactionDto: CreateMessageReactionDto,
     req: Request,
   ) {
     try {
       const userId = req.user.userId;
-      const { messageId, emojyId } = CreateMessageReactionDto;
+      const { messageId, emojyId } = createMessageReactionDto;
 
       const message = await this.messageRepo.findOne({
         where: { id: messageId },
@@ -110,7 +116,7 @@ export class EmojyService {
         where: { id: emojyId },
       });
       if (!emojy) {
-        throw new NotFoundException('Emojy not found');
+        throw new NotFoundException('Emoji not found');
       }
 
       const existingReaction = await this.messageReactionRepo.findOne({
@@ -123,17 +129,18 @@ export class EmojyService {
 
       if (existingReaction) {
         if (existingReaction.emojy.id === emojyId) {
-          // Same emoji → unreact (remove reaction)
+          // Same emoji → remove reaction (unreact)
           await this.messageReactionRepo.remove(existingReaction);
           return { message: 'Reaction removed' };
         } else {
-          // Different emoji → update to new emoji
+          // Different emoji → update the reaction
           existingReaction.emojy = emojy;
           await this.messageReactionRepo.save(existingReaction);
           return { message: 'Reaction updated' };
         }
       }
 
+      // No existing reaction → create new
       const newReaction = this.messageReactionRepo.create({
         message: { id: messageId },
         user: { id: userId },

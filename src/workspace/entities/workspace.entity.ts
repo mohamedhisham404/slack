@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Channels } from 'src/channels/entities/channel.entity';
 import { UserWorkspace } from './user-workspace.entity';
+import { Emojy } from 'src/emojy/entities/emojy.entity';
 
 @Entity()
 export class Workspace {
@@ -21,11 +22,14 @@ export class Workspace {
   created_at: Date;
 
   @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  update_at: Date;
+  updated_at: Date;
 
   @OneToMany(() => Channels, (channel) => channel.workspace)
   channels: Channels[];
 
   @OneToMany(() => UserWorkspace, (userWorkspace) => userWorkspace.workspace)
   userWorkspaces: UserWorkspace[];
+
+  @OneToMany(() => Emojy, (emojy) => emojy.workspace)
+  emojis: Emojy[];
 }

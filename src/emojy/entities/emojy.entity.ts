@@ -7,7 +7,7 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Channels } from 'src/channels/entities/channel.entity';
+import { Workspace } from 'src/workspace/entities/workspace.entity';
 
 @Entity()
 export class Emojy {
@@ -21,13 +21,13 @@ export class Emojy {
   name: string;
 
   @Column()
-  channel_id: number;
+  workspace_id: number;
 
-  @ManyToOne(() => Channels, (channel) => channel.emojis, {
+  @ManyToOne(() => Workspace, (workspace) => workspace.emojis, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'channel_id' })
-  channel: Channels;
+  @JoinColumn({ name: 'workspace_id' })
+  workspace: Workspace;
 
   @OneToMany(() => MessageReaction, (reaction) => reaction.emojy)
   reactions: MessageReaction[];

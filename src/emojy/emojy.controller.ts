@@ -18,27 +18,30 @@ import { CreateMessageReactionDto } from './dto/create-message-emojy.dto';
 export class EmojyController {
   constructor(private readonly emojyService: EmojyService) {}
 
-  @Post(':channelId')
+  @Post(':workspaceId')
   async create(
     @Body() createEmojyDto: CreateEmojyDto,
-    @Param('channelId') channelId: string,
+    @Param('workspaceId') workspaceId: string,
     @Req() req: Request,
   ) {
-    return this.emojyService.create(createEmojyDto, +channelId, req);
+    return this.emojyService.create(createEmojyDto, +workspaceId, req);
   }
 
-  @Get(':channelId')
-  async findAll(@Param('channelId') channelId: string, @Req() req: Request) {
-    return this.emojyService.findAll(+channelId, req);
+  @Get(':workspaceId')
+  async findAll(
+    @Param('workspaceId') workspaceId: string,
+    @Req() req: Request,
+  ) {
+    return this.emojyService.findAll(+workspaceId, req);
   }
 
-  @Get(':emojyId/channel/:channelId')
+  @Get(':emojyId/workspace/:workspaceId')
   async findOne(
-    @Param('channelId') channelId: string,
+    @Param('workspaceId') workspaceId: string,
     @Param('emojyId') emojyId: string,
     @Req() req: Request,
   ) {
-    return this.emojyService.findOne(+emojyId, +channelId, req);
+    return this.emojyService.findOne(+emojyId, +workspaceId, req);
   }
 
   @Post('message')
