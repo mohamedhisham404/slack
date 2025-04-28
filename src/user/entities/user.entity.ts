@@ -5,7 +5,6 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  Index,
 } from 'typeorm';
 import { Message } from 'src/message/entities/message.entity';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
@@ -14,7 +13,6 @@ import { Exclude } from 'class-transformer';
 
 @Entity()
 export class User {
-  @Index()
   @PrimaryGeneratedColumn()
   id: number;
 

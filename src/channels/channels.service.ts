@@ -145,6 +145,10 @@ export class ChannelsService {
 
       const addedUser = await this.userRepo.findOne({
         where: { id: user_id },
+        select: {
+          id: true,
+          name: true,
+        },
       });
       if (!addedUser) {
         throw new BadRequestException('User does not exist');
@@ -201,7 +205,9 @@ export class ChannelsService {
       const user_id = req.user.userId;
 
       if (workspace_id === 1) {
-        throw new NotFoundException('Workspace not found');
+        throw new NotFoundException(
+          'you are not allowed to access this workspace',
+        );
       }
 
       await this.workspaceService.checkWorkspace(workspace_id, user_id);
@@ -223,9 +229,6 @@ export class ChannelsService {
           admin_only: true,
           created_by: true,
           workspace: { id: true, name: true },
-          userChannels: {
-            role: true,
-          },
         },
       });
       if (!channels || channels.length === 0) {
@@ -375,6 +378,9 @@ export class ChannelsService {
       const channel = await this.channelRepo.findOne({
         where: {
           id: id,
+        },
+        relations: {
+          workspace: true,
         },
       });
       if (!channel) {

@@ -20,7 +20,7 @@ import {
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server<any, ServerToClientEvents>;
-  private users = new Map<number, string>();
+  users = new Map<number, string>();
 
   constructor(private jwtService: JwtService) {}
 
@@ -80,7 +80,16 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  sendMessageToChannel(channelId: number, message: EmittedMessageDto) {
-    this.server.to(`channel_${channelId}`).emit('newMessage', message);
+  sendMessageToChannel(
+    channelId: number,
+    message: EmittedMessageDto,
+    senderSocket?: CustomSocket,
+  ) {
+    if (senderSocket) {
+      senderSocket.to(`channel_${channelId}`).emit('newMessage', message);
+    } else {
+      // fallback: if no sender provided, send to everyone
+      this.server.to(`channel_${channelId}`).emit('newMessage', message);
+    }
   }
 }

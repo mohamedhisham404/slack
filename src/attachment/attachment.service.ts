@@ -9,11 +9,10 @@ import { Attachment, AttachmentType } from './entities/attachment.entity';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
-import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { Request } from 'express';
-import { Channels } from 'src/channels/entities/channel.entity';
 import { handleError } from 'src/utils/errorHandling';
 import { ChannelsService } from 'src/channels/channels.service';
+import { Message } from 'src/message/entities/message.entity';
 
 @Injectable()
 export class AttachmentService {
@@ -21,11 +20,8 @@ export class AttachmentService {
     @InjectRepository(Attachment)
     private attachmentRepository: Repository<Attachment>,
 
-    @InjectRepository(UserChannel)
-    private userChannelRepository: Repository<UserChannel>,
-
-    @InjectRepository(Channels)
-    private channelRepository: Repository<Channels>,
+    @InjectRepository(Message)
+    private messageRepository: Repository<Message>,
 
     private readonly channelsService: ChannelsService,
   ) {}
@@ -47,6 +43,14 @@ export class AttachmentService {
         await fs.promises.access(this.uploadPath);
       } catch {
         await fs.promises.mkdir(this.uploadPath, { recursive: true });
+      }
+
+      const message = await this.messageRepository.findOne({
+        where: { id: message_id },
+      });
+
+      if (!message) {
+        throw new NotFoundException('Message not found');
       }
 
       const allowedTypes: AttachmentType[] = [
@@ -87,6 +91,24 @@ export class AttachmentService {
             channel: true,
             user: true,
           },
+        },
+        select: {
+          message: {
+            id: true,
+            content: true,
+            created_at: true,
+            updated_at: true,
+            user: {
+              id: true,
+              name: true,
+              profile_photo: true,
+            },
+          },
+          id: true,
+          title: true,
+          type: true,
+          url: true,
+          size: true,
         },
       });
 

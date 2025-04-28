@@ -61,4 +61,12 @@ export class WorkspaceController {
   async remove(@Param('id') id: string, @Req() req: Request) {
     return this.workspaceService.remove(+id, req);
   }
+
+  @Get(':workspace_id/users')
+  async getUsers(
+    @Param('workspace_id') workspace_id: string,
+    @Req() req: Request,
+  ) {
+    return this.workspaceService.getUsers(+workspace_id, req);
+  }
 }

@@ -82,6 +82,13 @@ export class WorkspaceService {
       });
       await this.userWorkspaceRepo.save(userWorkspace);
 
+      await this.notificationWorkspaceRepo.save({
+        user_id: userId,
+        workspace_id: savedWorkspace.id,
+        admin_notifications: true,
+        huddle_notifications: true,
+      });
+
       const channel = this.channelRepo.create({
         name: 'general',
         workspace: savedWorkspace,
@@ -106,10 +113,20 @@ export class WorkspaceService {
       const { workspace_id, user_id, role } = addUser;
       const currentUserId = req.user.userId;
 
+      if (workspace_id === 1) {
+        throw new BadRequestException(
+          'You cannot do this action to this workspace',
+        );
+      }
+
       await this.checkWorkspace(workspace_id, currentUserId);
 
       const addedUser = await this.userRepo.findOne({
         where: { id: user_id },
+        select: {
+          id: true,
+          name: true,
+        },
       });
       if (!addedUser) {
         throw new BadRequestException('User does not exist');
@@ -168,6 +185,11 @@ export class WorkspaceService {
   }
 
   async findOne(id: number) {
+    if (id == 1) {
+      throw new BadRequestException(
+        'You cannot do this action to this workspace',
+      );
+    }
     return await this.workSpaceRepo.findOne({
       where: { id },
       relations: {
@@ -188,19 +210,36 @@ export class WorkspaceService {
         workspace: { id },
       },
     });
-    if (!workspaceUser) {
-      throw new BadRequestException('You are not a member of this workspace');
+    await this.checkWorkspace(id, userId);
+
+    if (id == 1) {
+      throw new BadRequestException(
+        'You cannot do this action to this workspace',
+      );
     }
-    if (workspaceUser.role !== workspaceRole.ADMIN) {
+
+    if (workspaceUser?.role !== workspaceRole.ADMIN) {
       throw new BadRequestException('You are not an admin of this workspace');
     }
-    return this.workSpaceRepo.update(id, updateWorkspaceDto);
+    await this.workSpaceRepo.update(id, updateWorkspaceDto);
+
+    return {
+      message: 'Workspace updated successfully',
+      workspaceId: id,
+      workspaceName: updateWorkspaceDto.name,
+    };
   }
 
   async removeUser(workspace_id: number, user_id: number, req: Request) {
     try {
       const currentUserId = req.user.userId;
       await this.checkWorkspace(workspace_id, currentUserId);
+
+      if (workspace_id == 1) {
+        throw new BadRequestException(
+          'You cannot do this action to this workspace',
+        );
+      }
 
       if (user_id === currentUserId) {
         throw new BadRequestException(
@@ -232,24 +271,29 @@ export class WorkspaceService {
           'You cannot remove a user who is an admin of this workspace',
         );
       }
+
       const channels = await this.channelRepo.find({
         where: {
           workspace: { id: workspace_id },
         },
       });
       const channelIds = channels.map((channel) => channel.id);
+
       await this.userChannelRepo.delete({
         channel: { id: In(channelIds) },
         user: { id: user_id },
       });
+
       await this.userWorkspaceRepo.delete({
         workspace: { id: workspace_id },
         user: { id: user_id },
       });
-      const result = await this.userRepo.delete(user_id);
-      if (result.affected === 0) {
-        throw new NotFoundException('User not found');
-      }
+
+      await this.notificationWorkspaceRepo.delete({
+        workspace: { id: workspace_id },
+        user: { id: user_id },
+      });
+
       return {
         message: 'User removed from workspace successfully',
         userId: user_id,
@@ -268,10 +312,15 @@ export class WorkspaceService {
         workspace: { id },
       },
     });
-    if (!workspaceUser) {
-      throw new BadRequestException('You are not a member of this workspace');
+    await this.checkWorkspace(id, userId);
+
+    if (id == 1) {
+      throw new BadRequestException(
+        'You cannot do this action to this workspace',
+      );
     }
-    if (workspaceUser.role !== workspaceRole.ADMIN) {
+
+    if (workspaceUser?.role !== workspaceRole.ADMIN) {
       throw new BadRequestException('You are not an admin of this workspace');
     }
     const channels = await this.channelRepo.find({
@@ -301,5 +350,28 @@ export class WorkspaceService {
       message: 'Workspace deleted successfully',
       workspaceId: id,
     };
+  }
+
+  async getUsers(workspace_id: number, req: Request) {
+    const userId = req.user.userId;
+    await this.checkWorkspace(workspace_id, userId);
+
+    if (workspace_id == 1) {
+      throw new BadRequestException(
+        'You cannot do this action to this workspace',
+      );
+    }
+
+    const users = await this.userRepo.find({
+      where: {
+        userWorkspaces: {
+          workspace: { id: workspace_id },
+        },
+      },
+      relations: {
+        userWorkspaces: true,
+      },
+    });
+    return users;
   }
 }

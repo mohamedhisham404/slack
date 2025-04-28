@@ -21,6 +21,7 @@ import {
 import { User } from 'src/user/entities/user.entity';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { handleError } from 'src/utils/errorHandling';
+import { CustomSocket } from 'src/events/types/socket.interface';
 
 @Injectable()
 export class MessageService {
@@ -100,7 +101,19 @@ export class MessageService {
       });
       const savedMessage = await this.messageRepo.save(message);
 
-      this.eventsGateway.sendMessageToChannel(channel_id, message);
+      const socketId = this.eventsGateway.users.get(userId);
+      let senderSocket: CustomSocket | undefined = undefined;
+
+      if (socketId) {
+        senderSocket = this.eventsGateway.server.sockets.sockets.get(socketId);
+      }
+
+      this.eventsGateway.sendMessageToChannel(
+        channel_id,
+        savedMessage,
+        senderSocket,
+      );
+
       return savedMessage;
     } catch (error) {
       handleError(error);

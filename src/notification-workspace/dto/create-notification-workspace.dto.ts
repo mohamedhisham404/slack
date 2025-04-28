@@ -4,7 +4,7 @@ export class CreateNotificationWorkspaceDto {
   @IsNumber() user_id: number;
   @IsNumber() workspace_id: number;
 
-  @IsOptional() @IsBoolean() VIP_notifications?: boolean;
+  @IsOptional() @IsBoolean() admin_notifications?: boolean;
   @IsOptional() @IsBoolean() huddle_notifications?: boolean;
 
   @IsOptional() @IsDateString() start_time?: string;
