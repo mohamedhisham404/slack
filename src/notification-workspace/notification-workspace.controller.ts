@@ -6,6 +6,7 @@ import {
   Req,
   UseGuards,
   Param,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { NotificationWorkspaceService } from './notification-workspace.service';
 import { UpdateNotificationWorkspaceDto } from './dto/update-notification-workspace.dto';
@@ -22,21 +23,21 @@ export class NotificationWorkspaceController {
   @Get(':workspaceId')
   async findOne(
     @Req() req: Request,
-    @Param('workspaceId') workspaceId: string,
+    @Param('workspaceId', ParseIntPipe) workspaceId: number,
   ) {
-    return this.notificationWorkspaceService.findOne(req, +workspaceId);
+    return this.notificationWorkspaceService.findOne(req, workspaceId);
   }
 
   @Patch(':workspaceId')
   async update(
     @Req() req: Request,
     @Body() updateNotificationWorkspaceDto: UpdateNotificationWorkspaceDto,
-    @Param('workspaceId') workspaceId: string,
+    @Param('workspaceId', ParseIntPipe) workspaceId: number,
   ) {
     return this.notificationWorkspaceService.update(
       req,
       updateNotificationWorkspaceDto,
-      +workspaceId,
+      workspaceId,
     );
   }
 }

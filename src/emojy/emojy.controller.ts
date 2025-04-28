@@ -6,6 +6,7 @@ import {
   Param,
   Req,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { EmojyService } from './emojy.service';
 import { CreateEmojyDto } from './dto/create-emojy.dto';
@@ -21,27 +22,27 @@ export class EmojyController {
   @Post(':workspaceId')
   async create(
     @Body() createEmojyDto: CreateEmojyDto,
-    @Param('workspaceId') workspaceId: string,
+    @Param('workspaceId', ParseIntPipe) workspaceId: number,
     @Req() req: Request,
   ) {
-    return this.emojyService.create(createEmojyDto, +workspaceId, req);
+    return this.emojyService.create(createEmojyDto, workspaceId, req);
   }
 
   @Get(':workspaceId')
   async findAll(
-    @Param('workspaceId') workspaceId: string,
+    @Param('workspaceId', ParseIntPipe) workspaceId: number,
     @Req() req: Request,
   ) {
-    return this.emojyService.findAll(+workspaceId, req);
+    return this.emojyService.findAll(workspaceId, req);
   }
 
   @Get(':emojyId/workspace/:workspaceId')
   async findOne(
-    @Param('workspaceId') workspaceId: string,
-    @Param('emojyId') emojyId: string,
+    @Param('workspaceId', ParseIntPipe) workspaceId: number,
+    @Param('emojyId', ParseIntPipe) emojyId: number,
     @Req() req: Request,
   ) {
-    return this.emojyService.findOne(+emojyId, +workspaceId, req);
+    return this.emojyService.findOne(emojyId, workspaceId, req);
   }
 
   @Post('message')

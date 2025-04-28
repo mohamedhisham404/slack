@@ -10,6 +10,7 @@ import {
   BadRequestException,
   UseGuards,
   Req,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { AttachmentService } from './attachment.service';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
@@ -53,31 +54,31 @@ export class AttachmentController {
 
   @Get('channel/:channel_id')
   async findAllByChannel(
-    @Param('channel_id') channel_id: string,
+    @Param('channel_id', ParseIntPipe) channel_id: number,
     @Req() req: Request,
   ) {
-    return this.attachmentService.findAllByChannel(+channel_id, req);
+    return this.attachmentService.findAllByChannel(channel_id, req);
   }
 
   @Get(':attachment_id/channel/:channel_id')
   async findOneByChannel(
-    @Param('channel_id') channelId: string,
-    @Param('attachment_id') attachmentId: string,
+    @Param('channel_id', ParseIntPipe) channelId: number,
+    @Param('attachment_id', ParseIntPipe) attachmentId: number,
     @Req() req: Request,
   ) {
     return this.attachmentService.findOneByChannel(
-      +channelId,
-      +attachmentId,
+      channelId,
+      attachmentId,
       req,
     );
   }
 
   @Delete(':attachment_id/channel/:channel_id')
   async remove(
-    @Param('channel_id') channelId: string,
-    @Param('attachment_id') attachmentId: string,
+    @Param('channel_id', ParseIntPipe) channelId: number,
+    @Param('attachment_id', ParseIntPipe) attachmentId: number,
     @Req() req: Request,
   ) {
-    return this.attachmentService.remove(+channelId, +attachmentId, req);
+    return this.attachmentService.remove(channelId, attachmentId, req);
   }
 }

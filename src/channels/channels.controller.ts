@@ -8,6 +8,7 @@ import {
   Delete,
   Req,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
 import { CreateChannelsDto } from './dto/create-channel.dto';
@@ -36,23 +37,19 @@ export class ChannelsController {
 
   @Get('workspace/:workspace_id')
   async findAllByWorkspace(
-    @Param('workspace_id') workspace_id: string,
+    @Param('workspace_id', ParseIntPipe) workspace_id: number,
     @Req() req: Request,
   ) {
-    return this.channelsService.findAllByWorkspace(+workspace_id, req);
+    return this.channelsService.findAllByWorkspace(workspace_id, req);
   }
 
   @Get(':channelid/workspace/:workspaceid')
   async findOneByWorkspace(
-    @Param('channelid') channelid: string,
-    @Param('workspaceid') workspaceid: string,
+    @Param('channelid', ParseIntPipe) channelid: number,
+    @Param('workspaceid', ParseIntPipe) workspaceid: number,
     @Req() req: Request,
   ) {
-    return this.channelsService.findOneByWorkspace(
-      +channelid,
-      +workspaceid,
-      req,
-    );
+    return this.channelsService.findOneByWorkspace(channelid, workspaceid, req);
   }
 
   @Get('dm')
@@ -61,30 +58,30 @@ export class ChannelsController {
   }
 
   @Get('dm/:id')
-  async findOneDM(@Param('id') id: string, @Req() req: Request) {
-    return this.channelsService.findOneDM(+id, req);
+  async findOneDM(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    return this.channelsService.findOneDM(id, req);
   }
 
   @Patch(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateChannelDto: UpdateChannelsDto,
     @Req() req: Request,
   ) {
-    return this.channelsService.update(+id, updateChannelDto, req);
+    return this.channelsService.update(id, updateChannelDto, req);
   }
 
   @Delete(':channel_id/user/:user_id')
   async removeUser(
-    @Param('channel_id') channel_id: string,
-    @Param('user_id') user_id: string,
+    @Param('channel_id', ParseIntPipe) channel_id: number,
+    @Param('user_id', ParseIntPipe) user_id: number,
     @Req() req: Request,
   ) {
-    return this.channelsService.removeUser(+channel_id, +user_id, req);
+    return this.channelsService.removeUser(channel_id, user_id, req);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string, @Req() req: Request) {
-    return this.channelsService.remove(+id, req);
+  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    return this.channelsService.remove(id, req);
   }
 }

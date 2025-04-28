@@ -8,6 +8,7 @@ import {
   Delete,
   Req,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 import {
@@ -44,31 +45,31 @@ export class MessageController {
 
   @Get(':channelId')
   async getAllMessagesOfChannel(
-    @Param('channelId') channelId: string,
+    @Param('channelId', ParseIntPipe) channelId: number,
     @Req() req: Request,
   ) {
-    return this.messageService.getAllMessagesOfChannel(+channelId, req);
+    return this.messageService.getAllMessagesOfChannel(channelId, req);
   }
 
   @Get(':messageId/channel/:channelId')
   async findOne(
-    @Param('messageId') messageId: string,
-    @Param('channelId') channelId: string,
+    @Param('messageId', ParseIntPipe) messageId: number,
+    @Param('channelId', ParseIntPipe) channelId: number,
     @Req() req: Request,
   ) {
-    return this.messageService.findOne(+messageId, +channelId, req);
+    return this.messageService.findOne(messageId, channelId, req);
   }
 
   @Patch(':messageId/channel/:channelId')
   async update(
-    @Param('messageId') messageId: string,
-    @Param('channelId') channelId: string,
+    @Param('messageId', ParseIntPipe) messageId: number,
+    @Param('channelId', ParseIntPipe) channelId: number,
     @Body() updateMessageDto: UpdateMessageDto,
     @Req() req: Request,
   ) {
     return this.messageService.update(
-      +messageId,
-      +channelId,
+      messageId,
+      channelId,
       updateMessageDto,
       req,
     );
@@ -76,14 +77,14 @@ export class MessageController {
 
   @Delete(':messageId/channel/:channelId')
   async remove(
-    @Param('messageId') messageId: string,
-    @Param('channelId') channelId: string,
+    @Param('messageId', ParseIntPipe) messageId: number,
+    @Param('channelId', ParseIntPipe) channelId: number,
     @Body() updateMessageDto: UpdateMessageDto,
     @Req() req: Request,
   ) {
     return this.messageService.remove(
-      +messageId,
-      +channelId,
+      messageId,
+      channelId,
       updateMessageDto,
       req,
     );

@@ -7,6 +7,7 @@ import {
   Delete,
   Req,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -20,36 +21,36 @@ export class UserController {
 
   @Get('channel/:channelId')
   async findAllUsersInChannel(
-    @Param('channelId') channelId: string,
+    @Param('channelId', ParseIntPipe) channelId: number,
     @Req() req: Request,
   ) {
-    return this.userService.findAllUsersInChannel(+channelId, req);
+    return this.userService.findAllUsersInChannel(channelId, req);
   }
 
   @Get('workspace/:workspaceId')
   async findAllUsersInWorkspace(
-    @Param('workspaceId') workspaceId: string,
+    @Param('workspaceId', ParseIntPipe) workspaceId: number,
     @Req() req: Request,
   ) {
-    return this.userService.findAllUsersInWorkspace(+workspaceId, req);
+    return this.userService.findAllUsersInWorkspace(workspaceId, req);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.findOne(id);
   }
 
   @Patch(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
     @Req() req: Request,
   ) {
-    return this.userService.update(+id, updateUserDto, req);
+    return this.userService.update(id, updateUserDto, req);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string, @Req() req: Request) {
-    return this.userService.remove(+id, req);
+  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    return this.userService.remove(id, req);
   }
 }
