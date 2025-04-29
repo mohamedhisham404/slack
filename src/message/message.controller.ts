@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 import {
@@ -47,8 +48,19 @@ export class MessageController {
   async getAllMessagesOfChannel(
     @Param('channelId', ParseIntPipe) channelId: number,
     @Req() req: Request,
+    @Query('limit') limit = '20',
+    @Query('page') page = '1',
   ) {
-    return this.messageService.getAllMessagesOfChannel(channelId, req);
+    // Convert to numbers and ensure fallback/default
+    const parsedLimit = Math.max(1, parseInt(limit));
+    const parsedPage = Math.max(1, parseInt(page));
+
+    return this.messageService.getAllMessagesOfChannel(
+      channelId,
+      req,
+      parsedLimit,
+      parsedPage,
+    );
   }
 
   @Get(':messageId/channel/:channelId')
@@ -79,14 +91,26 @@ export class MessageController {
   async remove(
     @Param('messageId', ParseIntPipe) messageId: number,
     @Param('channelId', ParseIntPipe) channelId: number,
-    @Body() updateMessageDto: UpdateMessageDto,
     @Req() req: Request,
   ) {
-    return this.messageService.remove(
-      messageId,
-      channelId,
-      updateMessageDto,
-      req,
-    );
+    return this.messageService.remove(messageId, channelId, req);
+  }
+
+  @Post('search/:channelId')
+  async searchMessages(
+    @Body('search') search: string,
+    @Param('channelId', ParseIntPipe) channelId: number,
+    @Req() req: Request,
+  ) {
+    return this.messageService.searchMessages(search, channelId, req);
+  }
+
+  @Post('date/:channelId')
+  async getMessageByDate(
+    @Body('date') date: string,
+    @Param('channelId', ParseIntPipe) channelId: number,
+    @Req() req: Request,
+  ) {
+    return this.messageService.getMessageData(date, channelId, req);
   }
 }

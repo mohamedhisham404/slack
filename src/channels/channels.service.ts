@@ -58,7 +58,11 @@ export class ChannelsService {
     }
   }
 
-  async create(createChannelDto: CreateChannelsDto, req: Request) {
+  async create(
+    createChannelDto: CreateChannelsDto,
+    req: Request,
+    flag: boolean = false,
+  ) {
     try {
       const userId = req.user.userId;
       const {
@@ -70,6 +74,12 @@ export class ChannelsService {
         is_dm,
         admin_only,
       } = createChannelDto;
+
+      if (workspace_id === 1 && flag == false) {
+        throw new NotFoundException(
+          'you are not allowed to access this workspace',
+        );
+      }
 
       await this.workspaceService.checkWorkspace(workspace_id, userId);
 

@@ -183,6 +183,7 @@ export class MessageService {
             is_dm: true,
           },
           req,
+          true,
         );
         await this.channelsService.addUser(
           {
@@ -222,31 +223,41 @@ export class MessageService {
     }
   }
 
-  async getAllMessagesOfChannel(channelId: number, req: Request) {
+  async getAllMessagesOfChannel(
+    channelId: number,
+    req: Request,
+    limit: number,
+    page: number,
+  ) {
     try {
       const userId = req.user.userId;
-
       await this.channelsService.checkTheChannel(channelId, userId);
 
-      const messages = await this.messageRepo
+      const skip = (page - 1) * limit;
+
+      const [messages, total] = await this.messageRepo
         .createQueryBuilder('message')
         .leftJoinAndSelect('message.user', 'user')
         .where('message.channel_id = :channelId', { channelId })
         .orderBy('message.created_at', 'DESC')
-        .getMany();
+        .skip(skip)
+        .take(limit)
+        .getManyAndCount();
 
-      if (!messages) {
-        throw new NotFoundException('No messages found in this channel');
-      }
-      return messages.map((message) => ({
-        ...message,
-        user: {
-          id: message.user.id,
-          name: message.user.name,
-          avatar: message.user.profile_photo,
-          is_active: message.user.is_active,
-        },
-      }));
+      return {
+        total,
+        page,
+        limit,
+        data: messages.map((message) => ({
+          ...message,
+          user: {
+            id: message.user.id,
+            name: message.user.name,
+            avatar: message.user.profile_photo,
+            is_active: message.user.is_active,
+          },
+        })),
+      };
     } catch (error) {
       handleError(error);
     }
@@ -316,12 +327,7 @@ export class MessageService {
     };
   }
 
-  async remove(
-    messageId: number,
-    channelId: number,
-    updateMessageDto: UpdateMessageDto,
-    req: Request,
-  ) {
+  async remove(messageId: number, channelId: number, req: Request) {
     const userId = req.user.userId;
     await this.channelsService.checkTheChannel(channelId, userId);
 
@@ -345,5 +351,75 @@ export class MessageService {
     return {
       message: 'Message deleted successfully',
     };
+  }
+
+  async searchMessages(search: string, channelId: number, req: Request) {
+    try {
+      const userId = req.user.userId;
+      await this.channelsService.checkTheChannel(channelId, userId);
+
+      const trimmedSearch = search?.trim();
+      if (!trimmedSearch || trimmedSearch.length < 2) {
+        throw new BadRequestException(
+          'Search term must be at least 2 characters.',
+        );
+      }
+
+      const messages = await this.messageRepo
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.user', 'user')
+        .where('message.channel_id = :channelId', { channelId })
+        .andWhere('message.content LIKE :search', {
+          search: `%${trimmedSearch}%`,
+        })
+        .andWhere('message.deleted_at IS NULL')
+        .orderBy('message.created_at', 'DESC')
+        .getMany();
+
+      return {
+        data: messages.map((message) => ({
+          ...message,
+          user: {
+            id: message.user.id,
+            name: message.user.name,
+            avatar: message.user.profile_photo,
+            is_active: message.user.is_active,
+          },
+        })),
+      };
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  async getMessageData(date: string, channelId: number, req: Request) {
+    try {
+      const userId = req.user.userId;
+      await this.channelsService.checkTheChannel(channelId, userId);
+
+      const message = await this.messageRepo
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.user', 'user')
+        .where('message.channel_id = :channelId', { channelId })
+        .andWhere('DATE(message.created_at) = :date', { date })
+        .andWhere('message.deleted_at IS NULL')
+        .orderBy('message.created_at', 'DESC')
+        .limit(1)
+        .getOne();
+      if (!message) {
+        throw new NotFoundException('No messages found for this date');
+      }
+      return {
+        ...message,
+        user: {
+          id: message.user.id,
+          name: message.user.name,
+          avatar: message.user.profile_photo,
+          is_active: message.user.is_active,
+        },
+      };
+    } catch (error) {
+      handleError(error);
+    }
   }
 }
