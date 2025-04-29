@@ -15,6 +15,7 @@ import { WorkspaceService } from 'src/workspace/workspace.service';
 import { handleError } from 'src/utils/errorHandling';
 import { plainToInstance } from 'class-transformer';
 import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
+import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
 
 @Injectable()
 export class UserService {
@@ -30,6 +31,9 @@ export class UserService {
 
     @InjectRepository(UserPreferences)
     private readonly userPreferencesRepository: Repository<UserPreferences>,
+
+    @InjectRepository(NotificationWorkspace)
+    private readonly notificationWorkspaceRepository: Repository<NotificationWorkspace>,
 
     private readonly channelService: ChannelsService,
     private readonly workspaceService: WorkspaceService,
@@ -179,6 +183,10 @@ export class UserService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
+
+      await this.notificationWorkspaceRepository.delete({
+        user_id: currentUserId,
+      });
 
       await this.userRepository.remove(user);
       return {

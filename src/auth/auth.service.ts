@@ -15,6 +15,15 @@ import { Request, Response } from 'express';
 import { JwtPayload } from '../types/jwt-payload.interface';
 import { handleError } from 'src/utils/errorHandling';
 import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
+import {
+  UserWorkspace,
+  workspaceRole,
+} from 'src/workspace/entities/user-workspace.entity';
+import { Channels } from 'src/channels/entities/channel.entity';
+import {
+  ChannelRole,
+  UserChannel,
+} from 'src/channels/entities/user-channel.entity';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +33,15 @@ export class AuthService {
 
     @InjectRepository(UserPreferences)
     private readonly userPreferencesRepository: Repository<UserPreferences>,
+
+    @InjectRepository(UserWorkspace)
+    private readonly usersWorkspaceRepository: Repository<UserWorkspace>,
+
+    @InjectRepository(Channels)
+    private readonly channelRepository: Repository<Channels>,
+
+    @InjectRepository(UserChannel)
+    private readonly userChannelRepository: Repository<UserChannel>,
 
     private jwtService: JwtService,
   ) {}
@@ -64,6 +82,28 @@ export class AuthService {
       await this.userPreferencesRepository.save({
         user_id: user.id,
       });
+
+      await this.usersWorkspaceRepository.save({
+        user: { id: user.id },
+        workspace: { id: 1 },
+        role: workspaceRole.MEMBER,
+      });
+
+      const generalChannel = await this.channelRepository.findOne({
+        where: {
+          workspace: { id: 1 },
+          name: 'general',
+          is_private: false,
+        },
+      });
+
+      if (generalChannel) {
+        await this.userChannelRepository.save({
+          user: { id: user.id },
+          channel: { id: generalChannel.id },
+          role: ChannelRole.MEMBER,
+        });
+      }
 
       const { accessToken, refreshToken } = this.generateToken(user.id);
       setCookies(res, accessToken, refreshToken);

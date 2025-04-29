@@ -4,9 +4,13 @@ import { NotificationWorkspaceController } from './notification-workspace.contro
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationWorkspace } from './entities/notification-workspace.entity';
 import { WorkspaceModule } from 'src/workspace/workspace.module';
+import { User } from 'src/user/entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([NotificationWorkspace]), WorkspaceModule],
+  imports: [
+    TypeOrmModule.forFeature([NotificationWorkspace, User]),
+    WorkspaceModule,
+  ],
   controllers: [NotificationWorkspaceController],
   providers: [NotificationWorkspaceService],
 })

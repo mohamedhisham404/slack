@@ -233,7 +233,9 @@ export class MessageService {
       const userId = req.user.userId;
       await this.channelsService.checkTheChannel(channelId, userId);
 
-      const skip = (page - 1) * limit;
+      const safeLimit = Math.max(limit, 1);
+      const safePage = Math.max(page, 1);
+      const skip = (safePage - 1) * safeLimit;
 
       const [messages, total] = await this.messageRepo
         .createQueryBuilder('message')
@@ -241,13 +243,13 @@ export class MessageService {
         .where('message.channel_id = :channelId', { channelId })
         .orderBy('message.created_at', 'DESC')
         .skip(skip)
-        .take(limit)
+        .take(safeLimit)
         .getManyAndCount();
 
       return {
         total,
-        page,
-        limit,
+        safePage,
+        safeLimit,
         data: messages.map((message) => ({
           ...message,
           user: {
@@ -302,6 +304,20 @@ export class MessageService {
     const message = await this.messageRepo.findOne({
       where: { id: messageId, channel: { id: channelId } },
       relations: ['user'],
+      select: {
+        id: true,
+        content: true,
+        is_pinned: true,
+        created_at: true,
+        updated_at: true,
+        deleted_at: true,
+        user: {
+          id: true,
+          name: true,
+          profile_photo: true,
+          is_active: true,
+        },
+      },
     });
     if (!message) {
       throw new NotFoundException('Message not found');
@@ -369,12 +385,16 @@ export class MessageService {
         .createQueryBuilder('message')
         .leftJoinAndSelect('message.user', 'user')
         .where('message.channel_id = :channelId', { channelId })
-        .andWhere('message.content LIKE :search', {
+        .andWhere('message.deleted_at IS NULL')
+        .andWhere('LOWER(message.content) LIKE LOWER(:search)', {
           search: `%${trimmedSearch}%`,
         })
-        .andWhere('message.deleted_at IS NULL')
         .orderBy('message.created_at', 'DESC')
         .getMany();
+
+      if (messages.length === 0) {
+        throw new NotFoundException('No matching messages found.');
+      }
 
       return {
         data: messages.map((message) => ({
@@ -392,7 +412,7 @@ export class MessageService {
     }
   }
 
-  async getMessageData(date: string, channelId: number, req: Request) {
+  async getMessageByDate(date: string, channelId: number, req: Request) {
     try {
       const userId = req.user.userId;
       await this.channelsService.checkTheChannel(channelId, userId);

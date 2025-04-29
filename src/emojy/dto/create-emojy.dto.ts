@@ -4,5 +4,5 @@ export class CreateEmojyDto {
   @IsString() unicode: string;
   @IsString() name: string;
   @IsNumber()
-  channelId: number;
+  workspaceId: number;
 }

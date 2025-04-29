@@ -35,10 +35,10 @@ export class Channels {
   @Column({ nullable: true })
   description: string;
 
-  @Column()
+  @Column({ nullable: true })
   created_by: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by' })
   creator: User;
 

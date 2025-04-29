@@ -351,27 +351,4 @@ export class WorkspaceService {
       workspaceId: id,
     };
   }
-
-  async getUsers(workspace_id: number, req: Request) {
-    const userId = req.user.userId;
-    await this.checkWorkspace(workspace_id, userId);
-
-    if (workspace_id == 1) {
-      throw new BadRequestException(
-        'You cannot do this action to this workspace',
-      );
-    }
-
-    const users = await this.userRepo.find({
-      where: {
-        userWorkspaces: {
-          workspace: { id: workspace_id },
-        },
-      },
-      relations: {
-        userWorkspaces: true,
-      },
-    });
-    return users;
-  }
 }

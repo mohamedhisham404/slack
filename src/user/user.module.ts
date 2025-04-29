@@ -8,6 +8,7 @@ import { ChannelsModule } from 'src/channels/channels.module';
 import { WorkspaceModule } from 'src/workspace/workspace.module';
 import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
+import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserPreferences } from 'src/user-preferences/entities/user-preference.e
       UserChannel,
       UserWorkspace,
       UserPreferences,
+      NotificationWorkspace,
     ]),
     ChannelsModule,
     WorkspaceModule,

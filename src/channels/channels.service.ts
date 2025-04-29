@@ -227,7 +227,10 @@ export class ChannelsService {
           workspace: { id: workspace_id },
         },
         relations: {
-          userChannels: true,
+          userChannels: {
+            user: true,
+          },
+          workspace: true,
         },
         select: {
           id: true,
@@ -238,6 +241,10 @@ export class ChannelsService {
           is_dm: true,
           admin_only: true,
           created_by: true,
+          userChannels: {
+            role: true,
+            user: { id: true, name: true },
+          },
           workspace: { id: true, name: true },
         },
       });

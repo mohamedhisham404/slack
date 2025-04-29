@@ -19,13 +19,9 @@ import { CreateMessageReactionDto } from './dto/create-message-emojy.dto';
 export class EmojyController {
   constructor(private readonly emojyService: EmojyService) {}
 
-  @Post(':workspaceId')
-  async create(
-    @Body() createEmojyDto: CreateEmojyDto,
-    @Param('workspaceId', ParseIntPipe) workspaceId: number,
-    @Req() req: Request,
-  ) {
-    return this.emojyService.create(createEmojyDto, workspaceId, req);
+  @Post()
+  async create(@Body() createEmojyDto: CreateEmojyDto, @Req() req: Request) {
+    return this.emojyService.create(createEmojyDto, req);
   }
 
   @Get(':workspaceId')

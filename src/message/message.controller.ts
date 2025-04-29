@@ -111,6 +111,6 @@ export class MessageController {
     @Param('channelId', ParseIntPipe) channelId: number,
     @Req() req: Request,
   ) {
-    return this.messageService.getMessageData(date, channelId, req);
+    return this.messageService.getMessageByDate(date, channelId, req);
   }
 }

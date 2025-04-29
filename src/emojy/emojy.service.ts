@@ -27,18 +27,15 @@ export class EmojyService {
     private messageReactionRepo: Repository<MessageReaction>,
   ) {}
 
-  async create(
-    createEmojyDto: CreateEmojyDto,
-    workspaceId: number,
-    req: Request,
-  ) {
+  async create(createEmojyDto: CreateEmojyDto, req: Request) {
     try {
       const userId = req.user.userId;
+      const { workspaceId, name, unicode } = createEmojyDto;
       await this.WorkspaceService.checkWorkspace(workspaceId, userId);
 
       const emojy = this.emojyRepository.create({
-        name: createEmojyDto.name,
-        unicode: createEmojyDto.unicode,
+        name,
+        unicode,
         workspace: { id: workspaceId },
       });
 
