@@ -278,11 +278,9 @@ export class ChannelsService {
         },
         relations: {
           workspace: true,
-          userChannels: true,
         },
         select: {
           id: true,
-          name: true,
           topic: true,
           description: true,
           is_private: true,
@@ -290,9 +288,6 @@ export class ChannelsService {
           admin_only: true,
           created_by: true,
           workspace: { id: true, name: true },
-          userChannels: {
-            role: true,
-          },
         },
       });
       if (!channel) {
