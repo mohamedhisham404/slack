@@ -24,6 +24,7 @@ import {
   ChannelRole,
   UserChannel,
 } from 'src/channels/entities/user-channel.entity';
+import { isMobile } from 'src/utils/isMobile';
 
 @Injectable()
 export class AuthService {
@@ -46,7 +47,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signup(signupData: CreateUserDto, res: Response) {
+  async signup(signupData: CreateUserDto, res: Response, req: Request) {
     const { name, email, password, phone } = signupData;
 
     try {
@@ -106,19 +107,26 @@ export class AuthService {
       }
 
       const { accessToken, refreshToken } = this.generateToken(user.id);
-      setCookies(res, accessToken, refreshToken);
-
-      return res.status(201).json({
-        statusCode: 201,
-        message: 'User created successfully',
-        success: true,
-      });
+      if (isMobile(req)) {
+        return res.status(201).json({
+          accessToken,
+          refreshToken,
+          success: true,
+        });
+      } else {
+        setCookies(res, accessToken, refreshToken);
+        return res.status(201).json({
+          statusCode: 201,
+          message: 'User created successfully',
+          success: true,
+        });
+      }
     } catch (error: unknown) {
       handleError(error);
     }
   }
 
-  async login(loginData: loginDto, res: Response) {
+  async login(loginData: loginDto, res: Response, req: Request) {
     const { email, password } = loginData;
     try {
       const user = await this.userRepository.findOne({
@@ -136,20 +144,28 @@ export class AuthService {
 
       const { accessToken, refreshToken } = this.generateToken(user.id);
 
-      setCookies(res, accessToken, refreshToken);
-
-      return res.status(201).json({
-        statusCode: 201,
-        message: 'User logged successfully',
-        success: true,
-      });
+      if (isMobile(req)) {
+        return res.status(201).json({
+          accessToken,
+          refreshToken,
+          success: true,
+        });
+      } else {
+        setCookies(res, accessToken, refreshToken);
+        return res.status(200).json({
+          statusCode: 200,
+          message: 'User logged in successfully',
+          success: true,
+        });
+      }
     } catch (error: unknown) {
       handleError(error);
     }
   }
 
   async refreshTokens(res: Response, req: Request) {
-    const refreshToken = req.cookies['refreshToken'] as string;
+    const refreshToken = (req.cookies['refreshToken'] ||
+      req.headers['authorization']?.split(' ')[1]) as string | undefined;
 
     try {
       if (!refreshToken) {
