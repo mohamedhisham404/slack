@@ -15,6 +15,8 @@ import { AuthModule } from './auth/auth.module';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { EventsModule } from './events/events.module';
 import config from './config/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -38,8 +40,22 @@ import config from './config/config';
     NotificationWorkspaceModule,
     AuthModule,
     EventsModule,
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000,
+          limit: 10,
+        },
+      ],
+    }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
