@@ -134,12 +134,6 @@ export class MessageService {
       } = CreateDMMessageDTO;
       const userId = req.user.userId;
 
-      if (receiver_id === userId) {
-        throw new BadRequestException(
-          'You cannot send a message to yourself right now',
-        );
-      }
-
       if (!content && !attachments) {
         throw new BadRequestException(
           'Message content or attachments are required',
@@ -166,12 +160,15 @@ export class MessageService {
               userIds: [userId, receiver_id],
             })
             .groupBy('uc2.channel_id')
-            .having('COUNT(DISTINCT uc2.user_id) = 2')
+            .having('COUNT(DISTINCT uc2.user_id) = :count', {
+              count: userId === receiver_id ? 1 : 2,
+            })
             .getQuery();
 
           return 'channel.id IN (' + subQuery + ')';
         })
         .getOne();
+
       if (!channel) {
         channel = await this.channelsService.create(
           {
@@ -185,14 +182,19 @@ export class MessageService {
           req,
           true,
         );
-        await this.channelsService.addUser(
-          {
-            channel_id: channel.id,
-            user_id: receiver_id,
-            role: ChannelRole.ADMIN,
-          },
-          req,
-        );
+
+        const userIdsToAdd =
+          userId === receiver_id ? [userId] : [userId, receiver_id];
+        for (const id of userIdsToAdd) {
+          await this.channelsService.addUser(
+            {
+              channel_id: channel.id,
+              user_id: id,
+              role: ChannelRole.ADMIN,
+            },
+            req,
+          );
+        }
       }
 
       if (parent_message_id) {
