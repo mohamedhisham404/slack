@@ -147,33 +147,28 @@ export class MessageService {
         throw new NotFoundException('Receiver not found');
       }
 
-      let channel = await this.channelsRepo
-        .createQueryBuilder('channel')
-        .innerJoin('channel.userChannels', 'uc')
-        .where('channel.is_dm = :isDM', { isDM: true })
-        .andWhere((qb) => {
-          const subQuery = qb
-            .subQuery()
-            .select('uc2.channel_id')
-            .from(UserChannel, 'uc2')
-            .where('uc2.user_id IN (:...userIds)', {
-              userIds: [userId, receiver_id],
-            })
-            .groupBy('uc2.channel_id')
-            .having('COUNT(DISTINCT uc2.user_id) = :count', {
-              count: userId === receiver_id ? 1 : 2,
-            })
-            .getQuery();
+      const dmChannelName =
+        userId === receiver_id
+          ? `dm-user-${userId}`
+          : `dm-user-${Math.min(userId, receiver_id)}-${Math.max(
+              userId,
+              receiver_id,
+            )}`;
 
-          return 'channel.id IN (' + subQuery + ')';
-        })
-        .getOne();
+      let channel = await this.channelsRepo.findOne({
+        where: {
+          name: dmChannelName,
+          is_dm: true,
+          workspace: { id: 1 },
+        },
+        relations: ['workspace'],
+      });
 
       if (!channel) {
         channel = await this.channelsService.create(
           {
             workspace_id: 1,
-            name: 'Direct Message',
+            name: dmChannelName,
             topic: 'Direct Message',
             description: 'Direct Message',
             is_private: true,
@@ -182,10 +177,19 @@ export class MessageService {
           req,
           true,
         );
+      }
 
-        const userIdsToAdd =
-          userId === receiver_id ? [userId] : [userId, receiver_id];
-        for (const id of userIdsToAdd) {
+      const userIdsToAdd =
+        userId === receiver_id ? [userId] : [userId, receiver_id];
+      for (const id of userIdsToAdd) {
+        const exists = await this.userChannelRepo.findOne({
+          where: {
+            user: { id },
+            channel: { id: channel.id },
+          },
+        });
+
+        if (!exists) {
           await this.channelsService.addUser(
             {
               channel_id: channel.id,
