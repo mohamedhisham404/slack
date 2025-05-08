@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   CanActivate,
   ExecutionContext,
   Injectable,
@@ -9,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { JwtPayload } from 'src/types/jwt-payload.interface';
+import { handleError } from 'src/utils/errorHandling';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -17,25 +17,41 @@ export class AuthGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    const request: Request = context.switchToHttp().getRequest();
-
-    const accessToken = request.cookies['accessToken'] as string;
-
-    if (!accessToken) {
-      throw new UnauthorizedException('Access token not found');
-    }
-
     try {
-      const payload = this.jwtService.verify<JwtPayload>(accessToken);
-      request.user = payload;
+      const request: Request = context.switchToHttp().getRequest();
+      const token = this.extractTokenFromRequest(request);
 
-      return true;
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'message' in error) {
-        throw new BadRequestException((error as { message: string }).message);
+      if (!token) {
+        throw new UnauthorizedException('Token not found');
       }
 
-      throw new BadRequestException('Failed to signup');
+      const payload = this.jwtService.verify<JwtPayload>(token);
+
+      if (payload.type !== 'access') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      request.user = payload;
+      return true;
+    } catch (error: unknown) {
+      handleError(error);
     }
+  }
+
+  private extractTokenFromRequest(request: Request): string | undefined {
+    const cookieToken = request.cookies['accessToken'] as string;
+    const authHeader = request.headers['authorization'];
+
+    if (cookieToken) return cookieToken;
+
+    if (
+      authHeader &&
+      typeof authHeader === 'string' &&
+      authHeader.startsWith('Bearer ')
+    ) {
+      return authHeader.split(' ')[1];
+    }
+
+    return undefined;
   }
 }

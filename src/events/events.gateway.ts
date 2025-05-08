@@ -43,6 +43,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!token) throw new UnauthorizedException('No token provided');
 
       const payload: JwtPayload = this.jwtService.verify(token);
+
+      if (payload.type !== 'access') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
       const userId = payload.userId;
       client.data = { userId };
 

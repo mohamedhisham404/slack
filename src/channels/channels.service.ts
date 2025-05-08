@@ -9,12 +9,13 @@ import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Channels } from './entities/channel.entity';
-import { ChannelRole, UserChannel } from './entities/user-channel.entity';
+import { UserChannel } from './entities/user-channel.entity';
 import { AddUserDto } from './dto/add-user.dto';
 import { User } from 'src/user/entities/user.entity';
 import { handleError } from 'src/utils/errorHandling';
 import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 import { WorkspaceService } from 'src/workspace/workspace.service';
+import { ChannelRole } from './enums/channel-role.enum';
 
 @Injectable()
 export class ChannelsService {

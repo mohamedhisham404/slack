@@ -4,18 +4,20 @@ export const setCookies = (
   res: Response,
   accessToken: string,
   refreshToken: string,
+  accessMaxAge: number,
+  refreshMaxAge: number,
 ) => {
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'strict',
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: accessMaxAge,
   });
 
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: refreshMaxAge,
   });
 };

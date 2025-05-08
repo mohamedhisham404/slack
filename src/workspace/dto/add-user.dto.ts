@@ -1,5 +1,5 @@
 import { IsEnum, IsNumber } from 'class-validator';
-import { workspaceRole } from '../entities/user-workspace.entity';
+import { workspaceRole } from '../enums/workspace-role.enum';
 
 export class AddUserDto {
   @IsNumber() workspace_id: number;

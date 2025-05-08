@@ -36,8 +36,13 @@ export class WorkspaceController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.workspaceService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    return this.workspaceService.findOne(id, req);
+  }
+
+  @Get()
+  async getAll(@Req() req: Request) {
+    return this.workspaceService.getAll(req);
   }
 
   @Patch(':id')

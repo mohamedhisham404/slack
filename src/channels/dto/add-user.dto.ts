@@ -1,5 +1,5 @@
 import { IsEnum, IsNumber } from 'class-validator';
-import { ChannelRole } from '../entities/user-channel.entity';
+import { ChannelRole } from '../enums/channel-role.enum';
 
 export class AddUserDto {
   @IsNumber() channel_id: number;

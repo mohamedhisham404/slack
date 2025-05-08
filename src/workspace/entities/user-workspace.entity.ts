@@ -8,11 +8,7 @@ import {
 } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Workspace } from './workspace.entity';
-
-export enum workspaceRole {
-  ADMIN = 'admin',
-  MEMBER = 'member',
-}
+import { workspaceRole } from '../enums/workspace-role.enum';
 
 @Entity('user_workspaces')
 export class UserWorkspace {

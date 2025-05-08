@@ -6,23 +6,9 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
-
-export enum UserLanguage {
-  ENGLISH = 'en',
-  ARABIC = 'ar',
-}
-
-export enum UserTheme {
-  LIGHT = 'light',
-  DARK = 'dark',
-}
-
-export enum UserColorMode {
-  DEFAULT = 'default',
-  COLORFUL = 'colorful',
-  RED = 'red',
-  BLUE = 'blue',
-}
+import { UserColorMode } from '../enums/userColorMode.enum';
+import { UserTheme } from '../enums/userTheme.enum';
+import { UserLanguage } from '../enums/userLanguage.enum';
 
 @Entity()
 export class UserPreferences {

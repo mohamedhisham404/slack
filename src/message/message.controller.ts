@@ -12,13 +12,11 @@ import {
   Query,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
-import {
-  CreateChannelMessageDto,
-  CreateDMMessageDTO,
-} from './dto/create-message.dto';
+import { CreateChannelMessageDTO } from './dto/create-channel-message.dto';
 import { Request } from 'express';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { CreateUserMessageDTO } from './dto/create-user-message.dto';
 
 @UseGuards(AuthGuard)
 @Controller('message')
@@ -27,7 +25,7 @@ export class MessageController {
 
   @Post('channel')
   async createChannelMessage(
-    @Body() CreateChannelMessageDto: CreateChannelMessageDto,
+    @Body() CreateChannelMessageDto: CreateChannelMessageDTO,
     @Req() req: Request,
   ) {
     return this.messageService.createChannelMessage(
@@ -38,10 +36,10 @@ export class MessageController {
 
   @Post('user')
   async createUserMessage(
-    @Body() CreateDMMessageDTO: CreateDMMessageDTO,
+    @Body() CreateUserMessageDTO: CreateUserMessageDTO,
     @Req() req: Request,
   ) {
-    return this.messageService.createUserMessage(CreateDMMessageDTO, req);
+    return this.messageService.createUserMessage(CreateUserMessageDTO, req);
   }
 
   @Get(':channelId')

@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
-import { ClientData } from './client-data.interface';
+import { JwtPayload } from 'src/types/jwt-payload.interface';
 
 export interface CustomSocket extends Socket {
-  data: ClientData;
+  data: JwtPayload;
 }

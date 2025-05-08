@@ -8,17 +8,16 @@ import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Workspace } from './entities/workspace.entity';
 import { In, Repository } from 'typeorm';
-import { UserWorkspace, workspaceRole } from './entities/user-workspace.entity';
+import { UserWorkspace } from './entities/user-workspace.entity';
 import { Request } from 'express';
 import { Channels } from 'src/channels/entities/channel.entity';
-import {
-  ChannelRole,
-  UserChannel,
-} from 'src/channels/entities/user-channel.entity';
+import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { AddUserDto } from './dto/add-user.dto';
 import { User } from 'src/user/entities/user.entity';
 import { handleError } from 'src/utils/errorHandling';
 import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
+import { ChannelRole } from 'src/channels/enums/channel-role.enum';
+import { workspaceRole } from './enums/workspace-role.enum';
 
 @Injectable()
 export class WorkspaceService {
@@ -46,6 +45,7 @@ export class WorkspaceService {
     const workspace = await this.workSpaceRepo.findOne({
       where: {
         id: workspace_id,
+        userWorkspaces: { id: user_id },
       },
     });
     if (!workspace) {
@@ -184,8 +184,11 @@ export class WorkspaceService {
     }
   }
 
-  async findOne(id: number) {
-    if (id == 1) {
+  async findOne(id: number, req: Request) {
+    const userId = req.user.userId;
+
+    await this.checkWorkspace(id, userId);
+    if (id === 1) {
       throw new BadRequestException(
         'You cannot do this action to this workspace',
       );
@@ -196,6 +199,23 @@ export class WorkspaceService {
         channels: true,
       },
     });
+  }
+
+  async getAll(req: Request) {
+    const userId = req.user.userId;
+
+    const Workspaces = await this.userWorkspaceRepo.find({
+      where: {
+        user: { id: userId },
+      },
+      relations: {
+        workspace: {
+          channels: true,
+        },
+      },
+    });
+
+    return Workspaces;
   }
 
   async update(

@@ -8,11 +8,7 @@ import {
 } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Channels } from './channel.entity';
-
-export enum ChannelRole {
-  ADMIN = 'admin',
-  MEMBER = 'member',
-}
+import { ChannelRole } from '../enums/channel-role.enum';
 
 @Entity('user_channels')
 export class UserChannel {

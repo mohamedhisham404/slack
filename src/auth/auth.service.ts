@@ -15,16 +15,13 @@ import { Request, Response } from 'express';
 import { JwtPayload } from '../types/jwt-payload.interface';
 import { handleError } from 'src/utils/errorHandling';
 import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
-import {
-  UserWorkspace,
-  workspaceRole,
-} from 'src/workspace/entities/user-workspace.entity';
+import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 import { Channels } from 'src/channels/entities/channel.entity';
-import {
-  ChannelRole,
-  UserChannel,
-} from 'src/channels/entities/user-channel.entity';
+import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { isMobile } from 'src/utils/isMobile';
+import { ConfigService } from '@nestjs/config';
+import { ChannelRole } from 'src/channels/enums/channel-role.enum';
+import { workspaceRole } from 'src/workspace/enums/workspace-role.enum';
 
 @Injectable()
 export class AuthService {
@@ -45,6 +42,8 @@ export class AuthService {
     private readonly userChannelRepository: Repository<UserChannel>,
 
     private jwtService: JwtService,
+
+    private configService: ConfigService,
   ) {}
 
   async signup(signupData: CreateUserDto, res: Response, req: Request) {
@@ -114,7 +113,13 @@ export class AuthService {
           success: true,
         });
       } else {
-        setCookies(res, accessToken, refreshToken);
+        const accessMaxAge =
+          this.configService.getOrThrow<number>('ACCESS_EXPIRES_MS');
+        const refreshMaxAge =
+          this.configService.getOrThrow<number>('REFRESH_EXPIRES_MS');
+
+        setCookies(res, accessToken, refreshToken, accessMaxAge, refreshMaxAge);
+
         return res.status(201).json({
           statusCode: 201,
           message: 'User created successfully',
@@ -151,7 +156,12 @@ export class AuthService {
           success: true,
         });
       } else {
-        setCookies(res, accessToken, refreshToken);
+        const accessMaxAge =
+          this.configService.getOrThrow<number>('ACCESS_EXPIRES_MS');
+        const refreshMaxAge =
+          this.configService.getOrThrow<number>('REFRESH_EXPIRES_MS');
+
+        setCookies(res, accessToken, refreshToken, accessMaxAge, refreshMaxAge);
         return res.status(200).json({
           statusCode: 200,
           message: 'User logged in successfully',
@@ -189,7 +199,18 @@ export class AuthService {
         user.id,
       );
 
-      setCookies(res, accessToken, newRefreshToken);
+      const accessMaxAge =
+        this.configService.getOrThrow<number>('ACCESS_EXPIRES_MS');
+      const refreshMaxAge =
+        this.configService.getOrThrow<number>('REFRESH_EXPIRES_MS');
+
+      setCookies(
+        res,
+        accessToken,
+        newRefreshToken,
+        accessMaxAge,
+        refreshMaxAge,
+      );
 
       return res.status(201).json({
         statusCode: 201,
@@ -215,18 +236,22 @@ export class AuthService {
       handleError(error);
     }
   }
+
   private generateToken(userId: number) {
+    const accessExpiresIn = this.configService.get<string>('ACCESS_EXPIRES_IN');
+    const refreshExpiresIn =
+      this.configService.get<string>('REFRESH_EXPIRES_IN');
+
     const accessToken = this.jwtService.sign(
-      { userId },
-      { expiresIn: process.env.ACCESS_EXPIRES_IN },
+      { userId, type: 'access' },
+      { expiresIn: accessExpiresIn },
     );
+
     const refreshToken = this.jwtService.sign(
-      { userId },
-      { expiresIn: process.env.REFRESH_EXPIRES_IN },
+      { userId, type: 'refresh' },
+      { expiresIn: refreshExpiresIn },
     );
-    return {
-      accessToken,
-      refreshToken,
-    };
+
+    return { accessToken, refreshToken };
   }
 }
