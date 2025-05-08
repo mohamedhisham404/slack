@@ -1,5 +1,5 @@
 export interface JwtPayload {
-  userId: number;
+  userId: string;
   type?: 'access' | 'refresh';
   iat?: number;
   exp?: number;

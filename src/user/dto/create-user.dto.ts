@@ -2,13 +2,10 @@ import {
   IsEmail,
   IsOptional,
   IsString,
-  IsBoolean,
-  IsDateString,
   MinLength,
   Matches,
 } from 'class-validator';
 
-// Password validation regex
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
@@ -23,10 +20,10 @@ export class CreateUserDto {
   })
   password: string;
 
-  @IsOptional() @IsString() phone: string;
-  @IsOptional() @IsString() profile_photo?: string;
-  @IsOptional() @IsString() status?: string;
-  @IsOptional() @IsBoolean() is_active?: boolean;
-  @IsOptional() @IsString() about_me?: string;
-  @IsOptional() @IsDateString() last_login?: string;
+  @Matches(/^01\d{9}$/, {
+    message: 'Phone number must start with 01 and be 11 digits long',
+  })
+  @IsOptional()
+  @IsString()
+  phone: string;
 }

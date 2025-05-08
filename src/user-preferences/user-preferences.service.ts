@@ -1,35 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UpdateUserPreferenceDto } from './dto/update-user-preference.dto';
 import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserPreferences } from './entities/user-preference.entity';
 import { Repository } from 'typeorm';
 import { handleError } from 'src/utils/errorHandling';
-import { User } from 'src/user/entities/user.entity';
+import { getUserFromRequest } from 'src/utils/get-user';
+import { UserColorMode } from './enums/userColorMode.enum';
+import { UserTheme } from './enums/userTheme.enum';
+import { UserLanguage } from './enums/userLanguage.enum';
 
 @Injectable()
 export class UserPreferencesService {
   constructor(
     @InjectRepository(UserPreferences)
     private readonly userPreferencesRepo: Repository<UserPreferences>,
-
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
 
   async findOne(req: Request) {
     try {
-      const userId = req.user.userId;
-
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
+      const reqUser = getUserFromRequest(req);
+      const currentUserId = reqUser?.userId;
 
       const userPreferences = await this.userPreferencesRepo.findOne({
-        where: { user_id: userId },
+        where: { user: { id: currentUserId } },
       });
 
       return userPreferences;
@@ -40,25 +34,24 @@ export class UserPreferencesService {
 
   async update(req: Request, updateUserPreferenceDto: UpdateUserPreferenceDto) {
     try {
-      const userId = req.user.userId;
+      const reqUser = getUserFromRequest(req);
+      const currentUserId = reqUser?.userId;
 
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-      });
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
+      const result = await this.userPreferencesRepo
+        .createQueryBuilder()
+        .update(UserPreferences)
+        .set({
+          time_zone: updateUserPreferenceDto.time_zone,
+          color_mode: updateUserPreferenceDto.color_mode as UserColorMode,
+          theme: updateUserPreferenceDto.theme as UserTheme,
+          language: updateUserPreferenceDto.language as UserLanguage,
+        })
+        .where('user_id = :userId', { userId: currentUserId })
+        .returning('*')
+        .execute();
 
-      const preferences = await this.userPreferencesRepo.findOne({
-        where: { user_id: userId },
-      });
-
-      if (!preferences) {
-        throw new NotFoundException('Preferences not found');
-      }
-
-      Object.assign(preferences, updateUserPreferenceDto);
-      return this.userPreferencesRepo.save(preferences);
+      const updatedPrefrances = (result.raw as UserPreferences[])[0];
+      return updatedPrefrances;
     } catch (error) {
       handleError(error);
     }

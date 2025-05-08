@@ -2,24 +2,22 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
 } from 'typeorm';
-import { Message } from 'src/message/entities/message.entity';
-import { UserChannel } from 'src/channels/entities/user-channel.entity';
-import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 import { Exclude } from 'class-transformer';
+import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   name: string;
 
-  @Column({ nullable: true, unique: true })
+  @Column({ unique: true })
   email: string;
 
   @Column({ nullable: true, unique: true })
@@ -50,12 +48,6 @@ export class User {
   @Column({ default: false })
   is_premium: boolean;
 
-  @OneToMany(() => Message, (message) => message.user)
-  messages: Message[];
-
-  @OneToMany(() => UserChannel, (userChannel) => userChannel.user)
-  userChannels: UserChannel[];
-
-  @OneToMany(() => UserWorkspace, (userWorkspace) => userWorkspace.user)
-  userWorkspaces: UserWorkspace[];
+  @OneToOne(() => UserPreferences, (prefs) => prefs.user, { cascade: true })
+  preferences: UserPreferences;
 }

@@ -12,15 +12,8 @@ import { UserLanguage } from '../enums/userLanguage.enum';
 
 @Entity()
 export class UserPreferences {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column()
-  user_id: number;
-
-  @OneToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'text', nullable: true })
   time_zone: string;
@@ -45,4 +38,8 @@ export class UserPreferences {
     default: UserLanguage.ENGLISH,
   })
   language: UserLanguage;
+
+  @OneToOne(() => User, (user) => user.preferences, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 }
