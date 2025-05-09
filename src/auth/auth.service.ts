@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { loginDto } from './dto/logIn.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,6 +23,8 @@ export class AuthService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
 
+    private readonly dataSource: DataSource,
+
     private jwtService: JwtService,
 
     private configService: ConfigService,
@@ -33,7 +35,7 @@ export class AuthService {
 
     try {
       const existingUser = await this.userRepository.findOne({
-        where: [{ email }, { phone }], //or
+        where: [{ email }, { phone }],
       });
 
       if (existingUser) {
@@ -47,15 +49,21 @@ export class AuthService {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const savedUser = await this.userRepository.save({
-        name,
-        email,
-        password: hashedPassword,
-        phone,
-        preferences: {},
+      const result = await this.dataSource.transaction(async (manager) => {
+        const savedUser = await manager.save(User, {
+          name,
+          email,
+          password: hashedPassword,
+          phone,
+          preferences: {},
+        });
+
+        const tokens = this.generateToken(savedUser.id);
+
+        return tokens;
       });
 
-      const { accessToken, refreshToken } = this.generateToken(savedUser.id);
+      const { accessToken, refreshToken } = result;
 
       if (isMobile(req)) {
         return res.status(201).json({

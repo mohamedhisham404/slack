@@ -7,10 +7,12 @@ import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
+import { WorkspaceModule } from './workspace/workspace.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, cache: true }),
+
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService): JwtModuleOptions => ({
@@ -19,10 +21,7 @@ import { AuthModule } from './auth/auth.module';
       global: true,
       inject: [ConfigService],
     }),
-    DatabaseModule,
-    UserModule,
-    AuthModule,
-    UserPreferencesModule,
+
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -31,6 +30,12 @@ import { AuthModule } from './auth/auth.module';
         },
       ],
     }),
+
+    DatabaseModule,
+    UserModule,
+    AuthModule,
+    UserPreferencesModule,
+    WorkspaceModule,
   ],
   controllers: [],
   providers: [

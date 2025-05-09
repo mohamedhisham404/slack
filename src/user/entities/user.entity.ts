@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToOne,
+  OneToMany,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
+import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 
 @Entity()
 export class User {
@@ -50,4 +52,7 @@ export class User {
 
   @OneToOne(() => UserPreferences, (prefs) => prefs.user, { cascade: true })
   preferences: UserPreferences;
+
+  @OneToMany(() => UserWorkspace, (userWorkspace) => userWorkspace.user)
+  userWorkspaces: UserWorkspace[];
 }

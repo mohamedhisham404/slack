@@ -7,6 +7,7 @@ import {
   Delete,
   Req,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -24,15 +25,17 @@ export class UserController {
   // ) {
   //   return this.userService.findAllUsersInChannel(channelId, req);
   // }
-  // @Get('workspace/:workspaceId')
-  // async findAllUsersInWorkspace(
-  //   @Param('workspaceId', ParseIntPipe) workspaceId: number,
-  //   @Req() req: Request,
-  // ) {
-  //   return this.userService.findAllUsersInWorkspace(workspaceId, req);
-  // }
+
+  @Get('workspace/:workspaceId')
+  async findAllUsersInWorkspace(
+    @Param('workspaceId', new ParseUUIDPipe()) workspaceId: string,
+    @Req() req: Request,
+  ) {
+    return this.userService.findAllUsersInWorkspace(workspaceId, req);
+  }
+
   @Get(':userId')
-  async findOne(@Param('userId') userId: string) {
+  async findOne(@Param('userId', new ParseUUIDPipe()) userId: string) {
     return this.userService.findOne(userId);
   }
 

@@ -11,7 +11,7 @@ import { Repository } from 'typeorm';
 // import { UserChannel } from 'src/channels/entities/user-channel.entity';
 // import { ChannelsService } from 'src/channels/channels.service';
 // import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
-// import { WorkspaceService } from 'src/workspace/workspace.service';
+import { WorkspaceService } from 'src/workspace/workspace.service';
 import { handleError } from 'src/utils/errorHandling';
 import { plainToInstance } from 'class-transformer';
 import { getUserFromRequest } from 'src/utils/get-user';
@@ -32,7 +32,7 @@ export class UserService {
     // @InjectRepository(NotificationWorkspace)
     // private readonly notificationWorkspaceRepository: Repository<NotificationWorkspace>,
     // private readonly channelService: ChannelsService,
-    // private readonly workspaceService: WorkspaceService,
+    private readonly workspaceService: WorkspaceService,
   ) {}
   // async findAllUsersInChannel(channelId: number, req: Request) {
   //   try {
@@ -69,44 +69,27 @@ export class UserService {
   //     handleError(error);
   //   }
   // }
-  // async findAllUsersInWorkspace(workspaceId: number, req: Request) {
-  //   try {
-  //     const currentUserId = req.user.userId;
-  //     if (workspaceId === 1) {
-  //       throw new BadRequestException('You cannot access this workspace');
-  //     }
-  //     await this.workspaceService.checkWorkspace(workspaceId, currentUserId);
-  //     const WorkspaceUser = await this.usersWorkspaceRepository.findOne({
-  //       where: { user: { id: currentUserId } },
-  //     });
-  //     if (!WorkspaceUser) {
-  //       throw new BadRequestException('You are not in this workspace');
-  //     }
-  //     const users = await this.usersWorkspaceRepository.find({
-  //       where: { workspace: { id: workspaceId } },
-  //       relations: ['user'],
-  //       select: {
-  //         id: true,
-  //         role: true,
-  //         joinedAt: true,
-  //         user: {
-  //           id: true,
-  //           name: true,
-  //           email: true,
-  //           profile_photo: true,
-  //           status: true,
-  //           is_active: true,
-  //         },
-  //       },
-  //     });
-  //     if (!users) {
-  //       throw new NotFoundException('No users found in this workspace');
-  //     }
-  //     return users;
-  //   } catch (error) {
-  //     handleError(error);
-  //   }
-  // }
+
+  async findAllUsersInWorkspace(workspaceId: string, req: Request) {
+    try {
+      const userReq = getUserFromRequest(req);
+      const currentUserId = userReq?.userId;
+
+      if (!workspaceId || !currentUserId) {
+        throw new BadRequestException('Workspace ID and User ID are required');
+      }
+
+      const currentworkspace = await this.workspaceService.checkWorkspace(
+        workspaceId,
+        currentUserId,
+      );
+
+      return currentworkspace.userWorkspaces;
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
   async findOne(userId: string) {
     try {
       const user = await this.userRepository.findOne({
