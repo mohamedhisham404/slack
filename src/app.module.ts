@@ -8,6 +8,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { WorkspaceModule } from './workspace/workspace.module';
+import { ChannelsModule } from './channels/channels.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { WorkspaceModule } from './workspace/workspace.module';
     AuthModule,
     UserPreferencesModule,
     WorkspaceModule,
+    ChannelsModule,
   ],
   controllers: [],
   providers: [

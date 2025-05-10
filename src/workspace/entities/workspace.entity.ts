@@ -5,8 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  JoinColumn,
+  ManyToOne,
 } from 'typeorm';
 import { UserWorkspace } from './user-workspace.entity';
+import { Channels } from 'src/channels/entities/channel.entity';
+import { User } from 'src/user/entities/user.entity';
 
 @Entity()
 export class Workspace {
@@ -26,4 +30,11 @@ export class Workspace {
     cascade: true,
   })
   userWorkspaces: UserWorkspace[];
+
+  @OneToMany(() => Channels, (channel) => channel.workspace, { cascade: true })
+  channels: Channels[];
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'created_by' })
+  created_by: User;
 }

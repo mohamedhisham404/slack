@@ -18,13 +18,13 @@ import { AuthGuard } from 'src/guards/auth.guards';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-  // @Get('channel/:channelId')
-  // async findAllUsersInChannel(
-  //   @Param('channelId', ParseIntPipe) channelId: number,
-  //   @Req() req: Request,
-  // ) {
-  //   return this.userService.findAllUsersInChannel(channelId, req);
-  // }
+  @Get('channel/:channelId')
+  async findAllUsersInChannel(
+    @Param('channelId', new ParseUUIDPipe()) channelId: string,
+    @Req() req: Request,
+  ) {
+    return this.userService.findAllUsersInChannel(channelId, req);
+  }
 
   @Get('workspace/:workspaceId')
   async findAllUsersInWorkspace(

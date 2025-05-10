@@ -15,7 +15,7 @@ import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { Request } from 'express';
 import { AuthGuard } from 'src/guards/auth.guards';
-import { AddUserDTO } from './dto/add-user.dto';
+import { AddUserDto } from './dto/add-user.dto';
 
 @UseGuards(AuthGuard)
 @Controller('workspace')
@@ -31,7 +31,7 @@ export class WorkspaceController {
   }
 
   @Post('/add_user')
-  async addUser(@Body() addUser: AddUserDTO, @Req() req: Request) {
+  async addUser(@Body() addUser: AddUserDto, @Req() req: Request) {
     return this.workspaceService.addUser(addUser, req);
   }
 

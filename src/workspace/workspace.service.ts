@@ -12,7 +12,7 @@ import { Workspace } from './entities/workspace.entity';
 import { DataSource, Repository } from 'typeorm';
 import { UserWorkspace } from './entities/user-workspace.entity';
 import { Request } from 'express';
-import { AddUserDTO } from './dto/add-user.dto';
+import { AddUserDto } from './dto/add-user.dto';
 import { handleError } from 'src/utils/errorHandling';
 import { workspaceRole } from './enums/workspace-role.enum';
 import { getUserFromRequest } from 'src/utils/get-user';
@@ -33,11 +33,6 @@ export class WorkspaceService {
     const workspace = await this.workSpaceRepo.findOne({
       where: {
         id: workspaceId,
-        userWorkspaces: {
-          user: {
-            id: userId,
-          },
-        },
       },
       relations: {
         userWorkspaces: {
@@ -65,15 +60,29 @@ export class WorkspaceService {
       throw new NotFoundException('Workspace not found');
     }
 
-    const isMember = workspace.userWorkspaces?.some(
+    const userWorkspace = workspace.userWorkspaces?.find(
       (uw) => uw.user.id === userId,
     );
 
-    if (!isMember) {
-      throw new ForbiddenException('You are not a member of this workspace');
+    if (!userWorkspace) {
+      throw new ForbiddenException('user not a member of this workspace');
     }
 
-    return workspace;
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      created_at: workspace.created_at,
+      updated_at: workspace.updated_at,
+      userWorkspace: {
+        id: userWorkspace.id,
+        role: userWorkspace.role,
+        user: {
+          id: userWorkspace.user.id,
+          email: userWorkspace.user.email,
+          name: userWorkspace.user.name,
+        },
+      },
+    };
   }
 
   async create(createWorkspaceDto: CreateWorkspaceDto, req: Request) {
@@ -99,14 +108,14 @@ export class WorkspaceService {
       return {
         message: 'Workspace created successfully',
         workspaceId: workspace.id,
-        workspaceName: createWorkspaceDto.name,
+        workspaceName: workspace.name,
       };
     } catch (error: unknown) {
       handleError(error);
     }
   }
 
-  async addUser(addUser: AddUserDTO, req: Request) {
+  async addUser(addUser: AddUserDto, req: Request) {
     try {
       const { workspaceId, userId, role } = addUser;
 
@@ -122,9 +131,15 @@ export class WorkspaceService {
         currentUserId,
       );
 
+      if (currentUserId === userId) {
+        throw new BadRequestException(
+          'You cannot add yourself to the workspace',
+        );
+      }
+
       if (
         role === workspaceRole.ADMIN &&
-        currentworkspace.userWorkspaces[0].role !== workspaceRole.ADMIN
+        currentworkspace.userWorkspace.role !== workspaceRole.ADMIN
       ) {
         throw new BadRequestException(
           'You are not allowed to add someone as admin',
@@ -212,7 +227,7 @@ export class WorkspaceService {
 
       const workspace = await this.checkWorkspace(workspaceId, userId);
 
-      if (workspace.userWorkspaces[0].role !== workspaceRole.ADMIN) {
+      if (workspace.userWorkspace.role !== workspaceRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to update this workspace',
         );
@@ -227,7 +242,9 @@ export class WorkspaceService {
         .where('id = :id', { id: workspaceId })
         .returning('*')
         .execute();
+
       const updatedWorkspace = (result.raw as Workspace[])[0];
+
       return updatedWorkspace;
     } catch (error) {
       handleError(error);
@@ -239,21 +256,21 @@ export class WorkspaceService {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
+      if (userId === currentUserId) {
+        throw new BadRequestException(
+          'You cannot remove yourself from workspace',
+        );
+      }
+
       if (!workspaceId || !currentUserId) {
         throw new BadRequestException('Workspace ID and User ID are required');
       }
 
       const workspace = await this.checkWorkspace(workspaceId, currentUserId);
 
-      if (workspace.userWorkspaces[0].role !== workspaceRole.ADMIN) {
+      if (workspace.userWorkspace.role !== workspaceRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to remove user from workspace',
-        );
-      }
-
-      if (userId === currentUserId) {
-        throw new BadRequestException(
-          'You cannot remove yourself from workspace',
         );
       }
 
@@ -261,9 +278,11 @@ export class WorkspaceService {
         user: { id: userId },
         workspace: { id: workspaceId },
       });
+
       if (result.affected === 0) {
         throw new NotFoundException('User not found in this workspace');
       }
+
       return {
         message: 'User removed from workspace successfully',
         userId: userId,
@@ -285,7 +304,7 @@ export class WorkspaceService {
 
       const workspace = await this.checkWorkspace(workspaceId, currentUserId);
 
-      if (workspace.userWorkspaces[0].role !== workspaceRole.ADMIN) {
+      if (workspace.userWorkspace.role !== workspaceRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to remove a workspace',
         );
@@ -293,9 +312,11 @@ export class WorkspaceService {
       const result = await this.workSpaceRepo.delete({
         id: workspaceId,
       });
+
       if (result.affected === 0) {
         throw new NotFoundException('Workspace not found');
       }
+
       return {
         message: 'Workspace removed successfully',
         workspaceId: workspaceId,

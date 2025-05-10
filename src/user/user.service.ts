@@ -8,83 +8,115 @@ import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
-// import { UserChannel } from 'src/channels/entities/user-channel.entity';
-// import { ChannelsService } from 'src/channels/channels.service';
-// import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
-import { WorkspaceService } from 'src/workspace/workspace.service';
 import { handleError } from 'src/utils/errorHandling';
 import { plainToInstance } from 'class-transformer';
 import { getUserFromRequest } from 'src/utils/get-user';
-// import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
-// import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
+import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
+import { UserChannel } from 'src/channels/entities/user-channel.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    // @InjectRepository(UserChannel)
-    // private readonly userChannelRepository: Repository<UserChannel>,
-    // @InjectRepository(UserWorkspace)
-    // private readonly usersWorkspaceRepository: Repository<UserWorkspace>,
-    // @InjectRepository(UserPreferences)
-    // private readonly userPreferencesRepository: Repository<UserPreferences>,
-    // @InjectRepository(NotificationWorkspace)
-    // private readonly notificationWorkspaceRepository: Repository<NotificationWorkspace>,
-    // private readonly channelService: ChannelsService,
-    private readonly workspaceService: WorkspaceService,
+
+    @InjectRepository(UserChannel)
+    private readonly userChannelRepository: Repository<UserChannel>,
+
+    @InjectRepository(UserWorkspace)
+    private readonly usersWorkspaceRepository: Repository<UserWorkspace>,
   ) {}
-  // async findAllUsersInChannel(channelId: number, req: Request) {
-  //   try {
-  //     const currentUserId = req.user.userId;
-  //     await this.channelService.checkTheChannel(channelId, currentUserId);
-  //     const WorkspaceUser = await this.usersWorkspaceRepository.findOne({
-  //       where: { user: { id: currentUserId } },
-  //     });
-  //     if (!WorkspaceUser) {
-  //       throw new BadRequestException('You are not in this workspace');
-  //     }
-  //     const users = await this.userChannelRepository.find({
-  //       where: { channel: { id: channelId } },
-  //       relations: ['user'],
-  //       select: {
-  //         id: true,
-  //         role: true,
-  //         joinedAt: true,
-  //         user: {
-  //           id: true,
-  //           name: true,
-  //           email: true,
-  //           profile_photo: true,
-  //           status: true,
-  //           is_active: true,
-  //         },
-  //       },
-  //     });
-  //     if (!users) {
-  //       throw new BadRequestException('No users found in this channel');
-  //     }
-  //     return users;
-  //   } catch (error) {
-  //     handleError(error);
-  //   }
-  // }
+  async findAllUsersInChannel(channelId: string, req: Request) {
+    try {
+      const userReq = getUserFromRequest(req);
+      const currentUserId = userReq?.userId;
+
+      const channel = await this.userChannelRepository.find({
+        where: {
+          channel: {
+            id: channelId,
+          },
+        },
+        relations: {
+          user: true,
+        },
+        select: {
+          id: true,
+          role: true,
+          joinedAt: true,
+          user: {
+            id: true,
+            email: true,
+            name: true,
+          },
+          channel: {
+            id: true,
+            name: true,
+          },
+        },
+      });
+
+      if (channel.length === 0) {
+        throw new NotFoundException('Channel not found');
+      }
+
+      const isMember = channel.some(
+        (userChannel) => userChannel.user.id === currentUserId,
+      );
+
+      if (!isMember) {
+        throw new NotFoundException('You are not a member of this channel');
+      }
+
+      return channel;
+    } catch (error) {
+      handleError(error);
+    }
+  }
 
   async findAllUsersInWorkspace(workspaceId: string, req: Request) {
     try {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (!workspaceId || !currentUserId) {
-        throw new BadRequestException('Workspace ID and User ID are required');
+      const workspace = await this.usersWorkspaceRepository.find({
+        where: {
+          workspace: {
+            id: workspaceId,
+          },
+        },
+        relations: {
+          user: true,
+        },
+        select: {
+          id: true,
+          role: true,
+          joinedAt: true,
+          user: {
+            id: true,
+            email: true,
+            name: true,
+          },
+          workspace: {
+            id: true,
+            name: true,
+          },
+        },
+      });
+
+      if (workspace.length === 0) {
+        throw new NotFoundException('Workspace not found');
       }
 
-      const currentworkspace = await this.workspaceService.checkWorkspace(
-        workspaceId,
-        currentUserId,
+      const isMember = workspace.some(
+        (userWorkspace) => userWorkspace.user.id === currentUserId,
       );
 
-      return currentworkspace.userWorkspaces;
+      if (!isMember) {
+        throw new NotFoundException('You are not a member of this workspace');
+      }
+
+      return workspace;
     } catch (error) {
       handleError(error);
     }
