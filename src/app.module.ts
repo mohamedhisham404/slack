@@ -9,6 +9,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { WorkspaceModule } from './workspace/workspace.module';
 import { ChannelsModule } from './channels/channels.module';
+import { NotificationWorkspaceModule } from './notification-workspace/notification-workspace.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ChannelsModule } from './channels/channels.module';
     UserPreferencesModule,
     WorkspaceModule,
     ChannelsModule,
+    NotificationWorkspaceModule,
   ],
   controllers: [],
   providers: [

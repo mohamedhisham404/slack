@@ -11,6 +11,7 @@ import {
 import { UserWorkspace } from './user-workspace.entity';
 import { Channels } from 'src/channels/entities/channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
 
 @Entity()
 export class Workspace {
@@ -37,4 +38,11 @@ export class Workspace {
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by' })
   created_by: User;
+
+  @OneToMany(
+    () => NotificationWorkspace,
+    (notificationWorkspace) => notificationWorkspace.workspace,
+    { onDelete: 'CASCADE' },
+  )
+  notificationWorkspaces: NotificationWorkspace[];
 }

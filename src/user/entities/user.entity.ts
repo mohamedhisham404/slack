@@ -11,6 +11,7 @@ import { Exclude } from 'class-transformer';
 import { UserPreferences } from 'src/user-preferences/entities/user-preference.entity';
 import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
+import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
 
 @Entity()
 export class User {
@@ -59,4 +60,11 @@ export class User {
 
   @OneToMany(() => UserChannel, (userChannel) => userChannel.user)
   userChannels: UserChannel[];
+
+  @OneToMany(
+    () => NotificationWorkspace,
+    (notificationWorkspace) => notificationWorkspace.user,
+    { cascade: true },
+  )
+  notificationWorkspaces: NotificationWorkspace[];
 }

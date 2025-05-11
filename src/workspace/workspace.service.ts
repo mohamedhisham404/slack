@@ -20,6 +20,7 @@ import { ChannelRole } from 'src/channels/enums/channel-role.enum';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { Channels } from 'src/channels/entities/channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
 
 @Injectable()
 export class WorkspaceService {
@@ -215,6 +216,11 @@ export class WorkspaceService {
           user: { id: userId },
           channel: { id: generalChannel.id },
           role: ChannelRole.MEMBER,
+        });
+
+        await manager.insert(NotificationWorkspace, {
+          user: { id: userId },
+          workspace: { id: workspaceId },
         });
       });
 
