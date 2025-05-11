@@ -15,6 +15,8 @@ import { handleError } from 'src/utils/errorHandling';
 import { WorkspaceService } from 'src/workspace/workspace.service';
 import { ChannelRole } from './enums/channel-role.enum';
 import { getUserFromRequest } from 'src/utils/get-user';
+import { workspaceRole } from 'src/workspace/enums/workspace-role.enum';
+import { Workspace } from 'src/workspace/entities/workspace.entity';
 
 @Injectable()
 export class ChannelsService {
@@ -25,12 +27,15 @@ export class ChannelsService {
     @InjectRepository(UserChannel)
     private readonly userChannelRepo: Repository<UserChannel>,
 
+    @InjectRepository(Workspace)
+    private readonly workspaceRepo: Repository<Workspace>,
+
     private readonly workspaceService: WorkspaceService,
 
     private readonly dataSource: DataSource,
   ) {}
 
-  async checkTheChannel(channelId: string, userId: string, is_dm = false) {
+  async checkTheChannel(channelId: string, userId: string) {
     const channel = await this.channelRepo.findOne({
       where: {
         id: channelId,
@@ -47,6 +52,7 @@ export class ChannelsService {
         description: true,
         is_private: true,
         is_dm: true,
+        is_general: true,
         admin_only: true,
         created_by: true,
         userChannels: {
@@ -73,7 +79,7 @@ export class ChannelsService {
       throw new NotFoundException('user not a member of this channel');
     }
 
-    if (is_dm) {
+    if (channel.is_dm) {
       if (channel.userChannels.length === 2) {
         throw new BadRequestException('You con not join this DM channel');
       }
@@ -86,6 +92,7 @@ export class ChannelsService {
       description: channel.description,
       is_private: channel.is_private,
       is_dm: channel.is_dm,
+      is_general: channel.is_general,
       admin_only: channel.admin_only,
       created_by: channel.created_by,
       userChannel: {
@@ -105,10 +112,56 @@ export class ChannelsService {
       const userReq = getUserFromRequest(req);
       const userId = userReq?.userId;
 
+      const workspace = await this.workspaceRepo.findOne({
+        where: {
+          id: createChannelDto.workspaceId,
+        },
+        relations: {
+          userWorkspaces: {
+            user: true,
+          },
+          channels: true,
+        },
+        select: {
+          userWorkspaces: {
+            user: { id: true },
+            role: true,
+          },
+          channels: {
+            name: true,
+          },
+        },
+      });
+
+      if (!workspace) {
+        throw new NotFoundException('Workspace not found');
+      }
+
+      const existingUser = workspace.userWorkspaces.find(
+        (user) => user.user.id === userId,
+      );
+      if (!existingUser) {
+        throw new NotFoundException('You are not a member of this workspace');
+      }
+
+      if (existingUser.role !== workspaceRole.ADMIN) {
+        throw new BadRequestException(
+          'You are not allowed to create a channel in this workspace',
+        );
+      }
+
+      const existingChannel = workspace.channels.find(
+        (channel) => channel.name === createChannelDto.name,
+      );
+      if (existingChannel) {
+        throw new BadRequestException('Channel name already exists');
+      }
+
       const channel = await this.dataSource.transaction(async (manager) => {
         const channel = manager.create(Channels, {
           ...createChannelDto,
           created_by: { id: userId },
+          workspace: { id: createChannelDto.workspaceId },
           userChannels: [
             {
               user: { id: userId },
@@ -157,7 +210,6 @@ export class ChannelsService {
       const currentChannel = await this.checkTheChannel(
         channelId,
         currentUserId,
-        true,
       );
 
       if (
@@ -424,10 +476,15 @@ export class ChannelsService {
       }
 
       const channel = await this.checkTheChannel(channelId, userId);
+
       if (channel.userChannel.role !== ChannelRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to update this channel',
         );
+      }
+
+      if (channel.is_general && updateChannelDto.is_general) {
+        throw new BadRequestException('You cannot update the general channel');
       }
 
       const result = await this.channelRepo
@@ -464,6 +521,7 @@ export class ChannelsService {
       }
 
       const channel = await this.checkTheChannel(channelId, currentUserId);
+
       if (channel.userChannel.role !== ChannelRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to update this channel',
@@ -499,9 +557,16 @@ export class ChannelsService {
       }
 
       const channel = await this.checkTheChannel(channelId, currentUserId);
+
       if (channel.userChannel.role !== ChannelRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to remove this channel',
+        );
+      }
+
+      if (channel.is_general) {
+        throw new BadRequestException(
+          'You cannot remove a user from the general channel',
         );
       }
 

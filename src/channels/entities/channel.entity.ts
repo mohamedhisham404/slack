@@ -33,6 +33,9 @@ export class Channels {
   is_dm: boolean;
 
   @Column({ default: false })
+  is_general: boolean;
+
+  @Column({ default: false })
   admin_only: boolean;
 
   @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
