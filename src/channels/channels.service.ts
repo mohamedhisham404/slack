@@ -221,6 +221,12 @@ export class ChannelsService {
         );
       }
 
+      if (currentChannel.is_private && role === ChannelRole.MEMBER) {
+        throw new BadRequestException(
+          'You are not allowed to add someone as member to a private channel',
+        );
+      }
+
       const userExists = await this.userChannelRepo.exist({
         where: {
           user: { id: userId },
@@ -471,7 +477,7 @@ export class ChannelsService {
       const userReq = getUserFromRequest(req);
       const userId = userReq?.userId;
 
-      if (!channelId || !userId) {
+      if (!userId) {
         throw new BadRequestException('Workspace ID and User ID are required');
       }
 
@@ -522,9 +528,15 @@ export class ChannelsService {
 
       const channel = await this.checkTheChannel(channelId, currentUserId);
 
+      if (channel.is_dm) {
+        throw new BadRequestException(
+          'You cannot remove a user from a DM channel',
+        );
+      }
+
       if (channel.userChannel.role !== ChannelRole.ADMIN) {
         throw new BadRequestException(
-          'You are not allowed to update this channel',
+          'You are not allowed to remove a user from this channel',
         );
       }
 

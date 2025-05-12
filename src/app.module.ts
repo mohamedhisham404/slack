@@ -10,6 +10,8 @@ import { AuthModule } from './auth/auth.module';
 import { WorkspaceModule } from './workspace/workspace.module';
 import { ChannelsModule } from './channels/channels.module';
 import { NotificationWorkspaceModule } from './notification-workspace/notification-workspace.module';
+import { EventsModule } from './events/events.module';
+import { MessageModule } from './message/message.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { NotificationWorkspaceModule } from './notification-workspace/notificati
     WorkspaceModule,
     ChannelsModule,
     NotificationWorkspaceModule,
+    EventsModule,
+    MessageModule,
   ],
   controllers: [],
   providers: [

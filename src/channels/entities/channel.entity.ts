@@ -11,6 +11,7 @@ import {
 import { UserChannel } from './user-channel.entity';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { User } from 'src/user/entities/user.entity';
+import { Message } from 'src/message/entities/message.entity';
 
 @Entity()
 export class Channels {
@@ -58,4 +59,7 @@ export class Channels {
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by' })
   created_by: User;
+
+  @OneToMany(() => Message, (message) => message.channel)
+  messages: Message[];
 }
