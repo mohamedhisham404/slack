@@ -42,7 +42,7 @@ export class Workspace {
   @OneToMany(
     () => NotificationWorkspace,
     (notificationWorkspace) => notificationWorkspace.workspace,
-    { onDelete: 'CASCADE' },
+    { onDelete: 'CASCADE', cascade: true },
   )
   notificationWorkspaces: NotificationWorkspace[];
 }

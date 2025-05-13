@@ -35,10 +35,10 @@ export class ChannelsController {
     return this.channelsService.addUser(addUser, req);
   }
 
-  @Get(':workspaceId')
+  @Get('participating/:workspaceId')
   async findAllParticipatingChannelsInWorkspace(
     @Req() req: Request,
-    @Param('workspaceid', new ParseUUIDPipe()) workspaceId: string,
+    @Param('workspaceId', new ParseUUIDPipe()) workspaceId: string,
   ) {
     return this.channelsService.findAllParticipatingChannelsInWorkspace(
       workspaceId,
@@ -54,13 +54,12 @@ export class ChannelsController {
     return this.channelsService.findAllByWorkspace(workspaceId, req);
   }
 
-  @Get(':channelId/workspace/:workspaceId')
-  async findOneByWorkspace(
+  @Get(':channelId')
+  async findOne(
     @Param('channelId', new ParseUUIDPipe()) channelId: string,
-    @Param('workspaceid', new ParseUUIDPipe()) workspaceId: string,
     @Req() req: Request,
   ) {
-    return this.channelsService.findOneByWorkspace(channelId, workspaceId, req);
+    return this.channelsService.findOneByWorkspace(channelId, req);
   }
 
   @Get('dm/workspace/:workspaceId')

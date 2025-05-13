@@ -77,20 +77,26 @@ export class MessageService {
   async createMessage(CreateChannelMessageDto: CreateMessageDto, req: Request) {
     try {
       const { userId, workspaceId } = CreateChannelMessageDto;
-      let channelId = CreateChannelMessageDto.channelId;
+      const messageDto = { ...CreateChannelMessageDto };
 
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
+
+      if (currentUserId === userId) {
+        throw new BadRequestException('You cannot send a message to yourself');
+      }
 
       if (!currentUserId) {
         throw new NotFoundException('User not found');
       }
 
-      if (channelId) {
+      if (messageDto.channelId) {
         const channel = await this.channelsRepo.findOne({
-          where: { id: channelId },
+          where: { id: messageDto.channelId },
           relations: {
-            userChannels: true,
+            userChannels: {
+              user: true,
+            },
           },
           select: {
             id: true,
@@ -98,6 +104,9 @@ export class MessageService {
             userChannels: {
               id: true,
               role: true,
+              user: {
+                id: true,
+              },
             },
           },
         });
@@ -126,9 +135,15 @@ export class MessageService {
         return message;
       } else if (userId) {
         const user = await this.userRepo.findOne({
-          where: { id: userId, userWorkspaces: { id: workspaceId } },
+          where: { id: userId },
           relations: {
-            userChannels: true,
+            userWorkspaces: {
+              workspace: true,
+            },
+            userChannels: {
+              user: true,
+              channel: true,
+            },
           },
           select: {
             id: true,
@@ -138,15 +153,24 @@ export class MessageService {
           },
         });
 
-        if (!user) {
-          throw new NotFoundException('User not found In the workspace');
-        }
-
-        const userChannel = user.userChannels.find(
-          (userChannel) => userChannel.user.id === currentUserId,
+        const isInWorkspace = user?.userWorkspaces.some(
+          (uw) => uw.workspace.id === workspaceId,
         );
 
-        if (!userChannel) {
+        if (!user) {
+          throw new NotFoundException('User not found');
+        }
+
+        if (!isInWorkspace) {
+          throw new NotFoundException('User not found in the workspace');
+        }
+
+        const DMChannel = user.userChannels.find(
+          (userChannel) =>
+            userChannel.channel.name === `DM_${currentUserId}_${userId}`,
+        );
+
+        if (!DMChannel) {
           if (!workspaceId) {
             throw new NotFoundException('workspaceId not found');
           }
@@ -161,20 +185,22 @@ export class MessageService {
             },
             req,
           );
-          channelId = channel.channel.id;
+          messageDto.channelId = channel.channel.id;
 
           await this.channelsService.addUser(
             {
-              channelId: channelId,
+              channelId: messageDto.channelId,
               userId: userId,
               role: ChannelRole.ADMIN,
             },
             req,
           );
+        } else {
+          messageDto.channelId = DMChannel.channel.id;
         }
 
         const message = this.createMessageTransaction(
-          CreateChannelMessageDto,
+          messageDto,
           currentUserId,
         );
         return message;
@@ -403,7 +429,6 @@ export class MessageService {
         .createQueryBuilder('message')
         .leftJoinAndSelect('message.user', 'user')
         .where('message.channel_id = :channelId', { channelId })
-        .andWhere('message.deleted_at IS NULL')
         .andWhere('LOWER(message.content) LIKE LOWER(:search)', {
           search: `%${trimmedSearch}%`,
         })

@@ -207,34 +207,67 @@ export class ChannelsService {
         throw new BadRequestException('You cannot add yourself to the channel');
       }
 
-      const currentChannel = await this.checkTheChannel(
-        channelId,
-        currentUserId,
+      const currentChannel = await this.channelRepo.findOne({
+        where: { id: channelId },
+        relations: {
+          userChannels: { user: true },
+          workspace: { userWorkspaces: { user: true } },
+        },
+        select: {
+          id: true,
+          is_private: true,
+          workspace: {
+            id: true,
+            userWorkspaces: {
+              id: true,
+              user: { id: true },
+            },
+          },
+          userChannels: {
+            id: true,
+            role: true,
+            user: { id: true },
+          },
+        },
+      });
+
+      if (!currentChannel) {
+        throw new NotFoundException('Channel not found');
+      }
+
+      const userChannel = currentChannel.userChannels.find(
+        (uc) => uc.user.id === currentUserId,
       );
+      if (!userChannel) {
+        throw new NotFoundException('You are not a member of this channel');
+      }
 
       if (
         role === ChannelRole.ADMIN &&
-        currentChannel.userChannel.role !== ChannelRole.ADMIN
+        userChannel.role !== ChannelRole.ADMIN
       ) {
         throw new BadRequestException(
           'You are not allowed to add someone as admin',
         );
       }
 
-      if (currentChannel.is_private && role === ChannelRole.MEMBER) {
+      if (currentChannel?.is_private && role === ChannelRole.MEMBER) {
         throw new BadRequestException(
           'You are not allowed to add someone as member to a private channel',
         );
       }
 
-      const userExists = await this.userChannelRepo.exist({
-        where: {
-          user: { id: userId },
-          channel: { id: channelId },
-        },
-      });
+      const addedUserWorkspace = currentChannel.workspace.userWorkspaces.find(
+        (uw) => uw.user.id === userId,
+      );
+      if (!addedUserWorkspace) {
+        throw new NotFoundException('User not found in this workspace');
+      }
 
-      if (userExists) {
+      const addedUserChannel = currentChannel.userChannels.find(
+        (uc) => uc.id === userId,
+      );
+      if (addedUserChannel) {
         throw new BadRequestException('User already exists in this channel');
       }
 
@@ -270,34 +303,8 @@ export class ChannelsService {
           },
         },
         relations: {
-          channel: {
-            userChannels: {
-              user: true,
-            },
-            workspace: true,
-          },
+          channel: true,
           user: true,
-        },
-        select: {
-          id: true,
-          channel: {
-            id: true,
-            name: true,
-            topic: true,
-            description: true,
-            is_private: true,
-            is_dm: true,
-            admin_only: true,
-            created_by: true,
-            userChannels: {
-              role: true,
-              user: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
         },
       });
 
@@ -305,7 +312,22 @@ export class ChannelsService {
         throw new NotFoundException('You are not a member of this workspace');
       }
 
-      return userChannels;
+      const formatted = userChannels.map((uc) => {
+        const { channel, role } = uc;
+        return {
+          id: channel.id,
+          name: channel.name,
+          topic: channel.topic,
+          description: channel.description,
+          is_private: channel.is_private,
+          is_dm: channel.is_dm,
+          admin_only: channel.admin_only,
+          created_by: channel.created_by,
+          role,
+        };
+      });
+
+      return formatted;
     } catch (error) {
       handleError(error);
     }
@@ -330,7 +352,6 @@ export class ChannelsService {
           userChannels: {
             user: true,
           },
-          workspace: true,
         },
         select: {
           id: true,
@@ -345,7 +366,6 @@ export class ChannelsService {
             role: true,
             user: { id: true, name: true },
           },
-          workspace: { id: true, name: true },
         },
       });
 
@@ -359,20 +379,14 @@ export class ChannelsService {
     }
   }
 
-  async findOneByWorkspace(
-    channelId: string,
-    workspaceId: string,
-    req: Request,
-  ) {
+  async findOneByWorkspace(channelId: string, req: Request) {
     try {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (!workspaceId || !currentUserId) {
+      if (!currentUserId) {
         throw new BadRequestException('Workspace ID is required');
       }
-
-      await this.workspaceService.checkWorkspace(workspaceId, currentUserId);
 
       const channel = await this.checkTheChannel(channelId, currentUserId);
 
@@ -455,6 +469,24 @@ export class ChannelsService {
         relations: {
           user: true,
           channel: true,
+        },
+        select: {
+          id: true,
+          user: {
+            id: true,
+            name: true,
+            email: true,
+          },
+          channel: {
+            id: true,
+            name: true,
+            topic: true,
+            description: true,
+            is_private: true,
+            is_dm: true,
+            admin_only: true,
+            created_by: true,
+          },
         },
       });
 

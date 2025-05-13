@@ -123,6 +123,11 @@ export class WorkspaceService {
               ],
             },
           ],
+          notificationWorkspaces: [
+            {
+              user: { id: userId },
+            },
+          ],
         });
 
         await manager.save(workspace);
@@ -166,7 +171,9 @@ export class WorkspaceService {
           id: userId,
         },
         relations: {
-          userWorkspaces: true,
+          userWorkspaces: {
+            workspace: true,
+          },
         },
       });
 
@@ -215,7 +222,10 @@ export class WorkspaceService {
         await manager.insert(UserChannel, {
           user: { id: userId },
           channel: { id: generalChannel.id },
-          role: ChannelRole.MEMBER,
+          role:
+            role === workspaceRole.ADMIN
+              ? ChannelRole.ADMIN
+              : ChannelRole.MEMBER,
         });
 
         await manager.insert(NotificationWorkspace, {
@@ -333,15 +343,6 @@ export class WorkspaceService {
           },
           channels: true,
         },
-        select: {
-          userWorkspaces: {
-            user: { id: true },
-            role: true,
-          },
-          channels: {
-            id: true,
-          },
-        },
       });
 
       if (!workspace) {
@@ -349,10 +350,19 @@ export class WorkspaceService {
       }
 
       const existingUser = workspace.userWorkspaces.find(
-        (user) => user.user.id === currentUserId,
+        (userWorkspace) => userWorkspace.user.id === currentUserId,
       );
+
       if (!existingUser) {
         throw new NotFoundException('You are not a member of this workspace');
+      }
+
+      const addedUser = workspace.userWorkspaces.find(
+        (userWorkspace) => userWorkspace.user.id === userId,
+      );
+
+      if (!addedUser) {
+        throw new NotFoundException('user is not a member of this workspace');
       }
 
       if (existingUser.role !== workspaceRole.ADMIN) {
@@ -371,14 +381,15 @@ export class WorkspaceService {
           });
         }
 
-        const result = await manager.delete(UserWorkspace, {
+        await manager.delete(NotificationWorkspace, {
           user: { id: userId },
           workspace: { id: workspaceId },
         });
 
-        if (result.affected === 0) {
-          throw new NotFoundException('User not found in this workspace');
-        }
+        await manager.delete(UserWorkspace, {
+          user: { id: userId },
+          workspace: { id: workspaceId },
+        });
       });
 
       return {

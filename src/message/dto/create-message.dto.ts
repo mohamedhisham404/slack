@@ -3,23 +3,24 @@ import {
   IsString,
   IsBoolean,
   IsUUID,
-  ValidateIf,
+  Validate,
 } from 'class-validator';
+import { IsChannelOrWorkspaceWithUserConstraint } from './validator';
 
 export class CreateMessageDto {
   @IsString()
   content: string;
 
-  @ValidateIf((o: CreateMessageDto) => !o.userId)
   @IsUUID()
+  @IsOptional()
   channelId?: string;
 
-  @ValidateIf((o: CreateMessageDto) => !o.channelId)
   @IsUUID()
+  @IsOptional()
   userId?: string;
 
-  @ValidateIf((o: CreateMessageDto) => !!o.userId)
   @IsUUID()
+  @IsOptional()
   workspaceId?: string;
 
   @IsOptional()
@@ -29,4 +30,7 @@ export class CreateMessageDto {
   @IsOptional()
   @IsBoolean()
   isPinned?: boolean;
+
+  @Validate(IsChannelOrWorkspaceWithUserConstraint)
+  dummyProperty = true;
 }
