@@ -12,6 +12,8 @@ import { ChannelsModule } from './channels/channels.module';
 import { NotificationWorkspaceModule } from './notification-workspace/notification-workspace.module';
 import { EventsModule } from './events/events.module';
 import { MessageModule } from './message/message.module';
+import { MinioClientModule } from './minio-client/minio-client.module';
+import { AttachmentModule } from './attachment/attachment.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { MessageModule } from './message/message.module';
     NotificationWorkspaceModule,
     EventsModule,
     MessageModule,
+    MinioClientModule,
+    AttachmentModule,
   ],
   controllers: [],
   providers: [
