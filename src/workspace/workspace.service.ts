@@ -21,6 +21,8 @@ import { UserChannel } from 'src/channels/entities/user-channel.entity';
 import { Channels } from 'src/channels/entities/channel.entity';
 import { User } from 'src/user/entities/user.entity';
 import { NotificationWorkspace } from 'src/notification-workspace/entities/notification-workspace.entity';
+import { Attachment } from 'src/attachment/entities/attachment.entity';
+import { MinioClientService } from 'src/minio-client/minio-client.service';
 
 @Injectable()
 export class WorkspaceService {
@@ -33,6 +35,11 @@ export class WorkspaceService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    @InjectRepository(Attachment)
+    private readonly attachmentRepo: Repository<Attachment>,
+
+    private minioClientService: MinioClientService,
 
     private readonly dataSource: DataSource,
   ) {}
@@ -327,12 +334,6 @@ export class WorkspaceService {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (userId === currentUserId) {
-        throw new BadRequestException(
-          'You cannot remove yourself from workspace',
-        );
-      }
-
       const workspace = await this.workSpaceRepo.findOne({
         where: {
           id: workspaceId,
@@ -417,6 +418,23 @@ export class WorkspaceService {
         throw new BadRequestException(
           'You are not allowed to remove a workspace',
         );
+      }
+
+      const attachments = await this.attachmentRepo
+        .createQueryBuilder('attachment')
+        .leftJoinAndSelect('attachment.message', 'message')
+        .leftJoinAndSelect('message.channel', 'channel')
+        .leftJoinAndSelect('channel.workspace', 'workspace')
+        .where('workspace.id = :workspaceId', { workspaceId })
+        .select(['attachment.url', 'attachment.type'])
+        .getMany();
+
+      for (const attachment of attachments) {
+        const objectName = attachment.url.split('/').pop();
+        if (!objectName) {
+          throw new NotFoundException('Object name not found in URL');
+        }
+        await this.minioClientService.delete(objectName, attachment.type);
       }
 
       await this.workSpaceRepo.delete({

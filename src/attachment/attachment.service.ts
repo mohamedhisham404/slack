@@ -99,30 +99,6 @@ export class AttachmentService {
         where: {
           message: { channel: { id: channelId } },
         },
-        relations: {
-          message: {
-            channel: true,
-            user: true,
-          },
-        },
-        select: {
-          message: {
-            id: true,
-            content: true,
-            created_at: true,
-            updated_at: true,
-            user: {
-              id: true,
-              name: true,
-              profile_photo: true,
-            },
-          },
-          id: true,
-          title: true,
-          type: true,
-          url: true,
-          size: true,
-        },
       });
 
       if (!attachments || attachments.length === 0) {
@@ -154,12 +130,6 @@ export class AttachmentService {
         where: {
           id: attachmentId,
           message: { channel: { id: channelId } },
-        },
-        relations: {
-          message: {
-            channel: true,
-            user: true,
-          },
         },
       });
 

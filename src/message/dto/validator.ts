@@ -1,5 +1,5 @@
-// validator.ts
 import {
+  ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
@@ -11,9 +11,11 @@ import { CreateMessageDto } from './create-message.dto';
 export class IsChannelOrWorkspaceWithUserConstraint
   implements ValidatorConstraintInterface
 {
-  validate(object: CreateMessageDto): boolean {
+  validate(_value: any, args: ValidationArguments): boolean {
+    const object = args.object as CreateMessageDto;
     if (object.channelId) return true;
-    return !!object.workspaceId && !!object.userId;
+    else if (object.workspaceId && object.userId) return true;
+    return false;
   }
 
   defaultMessage(): string {

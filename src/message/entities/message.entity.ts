@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Channels } from 'src/channels/entities/channel.entity';
 import { User } from 'src/user/entities/user.entity';
+import { Attachment } from 'src/attachment/entities/attachment.entity';
 
 @Entity()
 export class Message {
@@ -43,4 +45,9 @@ export class Message {
   })
   @JoinColumn({ name: 'channel_id' })
   channel: Channels;
+
+  @OneToMany(() => Attachment, (attachment) => attachment.message, {
+    cascade: true,
+  })
+  attachments: Attachment[];
 }

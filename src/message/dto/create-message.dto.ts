@@ -32,5 +32,5 @@ export class CreateMessageDto {
   isPinned?: boolean;
 
   @Validate(IsChannelOrWorkspaceWithUserConstraint)
-  dummyProperty = true;
+  dummyProperty: boolean = true;
 }

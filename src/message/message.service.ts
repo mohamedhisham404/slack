@@ -82,10 +82,6 @@ export class MessageService {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (currentUserId === userId) {
-        throw new BadRequestException('You cannot send a message to yourself');
-      }
-
       if (!currentUserId) {
         throw new NotFoundException('User not found');
       }
@@ -167,7 +163,8 @@ export class MessageService {
 
         const DMChannel = user.userChannels.find(
           (userChannel) =>
-            userChannel.channel.name === `DM_${currentUserId}_${userId}`,
+            userChannel.channel.name ===
+            `DM_${currentUserId}_${userId}_${workspaceId}`,
         );
 
         if (!DMChannel) {
@@ -178,13 +175,14 @@ export class MessageService {
           const channel = await this.channelsService.create(
             {
               workspaceId: workspaceId,
-              name: `DM_${currentUserId}_${userId}`,
-              topic: `DM_${currentUserId}_${userId}`,
-              description: `DM_${currentUserId}_${userId}`,
+              name: `DM_${currentUserId}_${userId}_${workspaceId}`,
+              topic: `DM`,
+              description: `DM`,
               is_dm: true,
             },
             req,
           );
+
           messageDto.channelId = channel.channel.id;
 
           await this.channelsService.addUser(
@@ -194,6 +192,7 @@ export class MessageService {
               role: ChannelRole.ADMIN,
             },
             req,
+            true,
           );
         } else {
           messageDto.channelId = DMChannel.channel.id;
@@ -303,37 +302,34 @@ export class MessageService {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      const channel = await this.channelsRepo.findOne({
-        where: { id: channelId, messages: { id: messageId } },
-        relations: {
-          userChannels: true,
-          messages: true,
+      const message = await this.messageRepo.findOne({
+        where: {
+          id: messageId,
+          channel: { id: channelId },
         },
-        select: {
-          id: true,
-          userChannels: {
-            id: true,
-          },
-          messages: {
-            user: {
-              id: true,
+        relations: {
+          user: true,
+          channel: {
+            userChannels: {
+              user: true,
             },
           },
         },
       });
 
-      if (!channel) {
-        throw new NotFoundException('Channel or message not found');
+      if (!message) {
+        throw new NotFoundException('Message not found in this channel');
       }
 
-      const userChannel = channel.userChannels.find(
-        (userChannel) => userChannel.user.id === currentUserId,
+      const userChannel = message.channel.userChannels.find(
+        (uc) => uc.user.id === currentUserId,
       );
+
       if (!userChannel) {
         throw new NotFoundException('You are not a member of this channel');
       }
 
-      if (channel.messages[0].user.id !== currentUserId) {
+      if (message.user.id !== currentUserId) {
         throw new BadRequestException('You are not the owner of this message');
       }
 
@@ -432,7 +428,7 @@ export class MessageService {
         .andWhere('LOWER(message.content) LIKE LOWER(:search)', {
           search: `%${trimmedSearch}%`,
         })
-        .orderBy('message.created_at', 'DESC')
+        .orderBy('message.created_at', 'ASC')
         .getMany();
 
       if (messages.length === 0) {
@@ -471,8 +467,7 @@ export class MessageService {
         .leftJoinAndSelect('message.user', 'user')
         .where('message.channel_id = :channelId', { channelId })
         .andWhere('DATE(message.created_at) = :date', { date })
-        .andWhere('message.deleted_at IS NULL')
-        .orderBy('message.created_at', 'DESC')
+        .orderBy('message.created_at', 'ASC')
         .limit(1)
         .getOne();
       if (!message) {

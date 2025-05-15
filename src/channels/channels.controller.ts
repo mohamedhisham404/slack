@@ -59,7 +59,7 @@ export class ChannelsController {
     @Param('channelId', new ParseUUIDPipe()) channelId: string,
     @Req() req: Request,
   ) {
-    return this.channelsService.findOneByWorkspace(channelId, req);
+    return this.channelsService.findOne(channelId, req);
   }
 
   @Get('dm/workspace/:workspaceId')
