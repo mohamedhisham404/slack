@@ -139,34 +139,54 @@ export class UserService {
     }
   }
 
-  async update(updateUserDto: UpdateUserDto, req: Request) {
+  async update(
+    profilePic: Express.Multer.File | undefined,
+    updateUserDto: UpdateUserDto,
+    req: Request,
+  ) {
     try {
       const reqUser = getUserFromRequest(req);
       const currentUserId = reqUser?.userId;
 
-      // if (updateUserDto.profile_photo) {
-      //   const user = await this.userRepository.findOne({
-      //     where: { id: currentUserId },
-      //     select: { profile_photo: true },
-      //   });
+      let profilePhotoUrl: string | undefined;
 
-      //   if (user && user.profile_photo) {
-      //     const objectName = user.profile_photo.split('/').pop();
+      if (profilePic) {
+        const user = await this.userRepository.findOne({
+          where: { id: currentUserId },
+          select: { profile_photo: true },
+        });
 
-      //     if (!objectName) {
-      //       throw new BadRequestException('Invalid profile photo URL');
-      //     }
+        if (user?.profile_photo) {
+          const objectName = user.profile_photo.split('/').pop();
 
-      //     await this.minioClientService.delete(objectName, 'profile-pictures');
-      //   }
+          if (!objectName) {
+            throw new BadRequestException('Invalid profile photo URL');
+          }
 
-      //   await this.minioClientService.upload()
-      // }
+          await this.minioClientService.delete(objectName, 'profile-pictures');
+        }
+
+        const uploadedFile = await this.minioClientService.upload(
+          profilePic.buffer,
+          profilePic.originalname,
+          profilePic.mimetype,
+          'profile-pictures',
+        );
+        profilePhotoUrl = uploadedFile.url;
+      }
+
+      const updatePayload: Partial<User> = {
+        ...updateUserDto,
+      };
+
+      if (profilePhotoUrl) {
+        updatePayload.profile_photo = profilePhotoUrl;
+      }
 
       const result = await this.userRepository
         .createQueryBuilder()
         .update(User)
-        .set({ ...updateUserDto })
+        .set(updatePayload)
         .where('id = :id', { id: currentUserId })
         .returning('*')
         .execute();

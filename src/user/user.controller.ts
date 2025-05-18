@@ -8,11 +8,15 @@ import {
   Req,
   UseGuards,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Request } from 'express';
 import { AuthGuard } from 'src/guards/auth.guards';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 @UseGuards(AuthGuard)
 @Controller('user')
@@ -40,8 +44,18 @@ export class UserController {
   }
 
   @Patch()
-  async update(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
-    return this.userService.update(updateUserDto, req);
+  @UseInterceptors(
+    FileInterceptor('profilePic', {
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      storage: memoryStorage(),
+    }),
+  )
+  async update(
+    @UploadedFile() profilePic: Express.Multer.File | undefined,
+    @Body() updateUserDto: UpdateUserDto,
+    @Req() req: Request,
+  ) {
+    return this.userService.update(profilePic, updateUserDto, req);
   }
 
   @Delete()
