@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -88,7 +89,10 @@ export class MessageService {
 
       if (messageDto.channelId) {
         const channel = await this.channelsRepo.findOne({
-          where: { id: messageDto.channelId },
+          where: {
+            id: messageDto.channelId,
+            userChannels: { user: { id: currentUserId } },
+          },
           relations: {
             userChannels: {
               user: true,
@@ -111,18 +115,22 @@ export class MessageService {
           throw new NotFoundException('Channel not found');
         }
 
-        const userChannel = channel.userChannels.find(
-          (userChannel) => userChannel.user.id === currentUserId,
-        );
-        if (!userChannel) {
+        if (!channel.userChannels || channel.userChannels.length === 0) {
           throw new NotFoundException('You are not a member of this channel');
         }
 
-        if (userChannel.role !== ChannelRole.ADMIN && channel.admin_only) {
+        const userChannel = channel.userChannels.find(
+          (uc) => uc.user.id === currentUserId,
+        );
+        if (
+          !userChannel ||
+          (userChannel.role !== ChannelRole.ADMIN && channel.admin_only)
+        ) {
           throw new BadRequestException(
             'Only admins can send messages in this channel',
           );
         }
+
         const message = await this.createMessageTransaction(
           CreateChannelMessageDto,
           currentUserId,
@@ -130,60 +138,74 @@ export class MessageService {
 
         return message;
       } else if (userId) {
-        const user = await this.userRepo.findOne({
-          where: { id: userId },
-          relations: {
-            userWorkspaces: {
-              workspace: true,
-            },
-            userChannels: {
-              user: true,
-              channel: true,
-            },
-          },
-          select: {
-            id: true,
-            userChannels: {
-              id: true,
-            },
-          },
-        });
+        const users = await this.userRepo
+          .createQueryBuilder('user')
+          .leftJoinAndSelect('user.userWorkspaces', 'userWorkspace')
+          .leftJoinAndSelect('userWorkspace.workspace', 'workspace')
+          .leftJoinAndSelect('user.userChannels', 'userChannel')
+          .leftJoinAndSelect('userChannel.channel', 'channel')
+          .where('user.id IN (:...userIds)', {
+            userIds: [currentUserId, userId],
+          })
+          .andWhere('workspace.id = :workspaceId', { workspaceId })
+          .andWhere('channel.workspace.id = :workspaceId', { workspaceId })
+          .select([
+            'user.id',
+            'userWorkspace.id',
+            'workspace.id',
+            'userChannel.id',
+            'channel.id',
+            'channel.name',
+          ])
+          .getMany();
 
-        const isInWorkspace = user?.userWorkspaces.some(
-          (uw) => uw.workspace.id === workspaceId,
-        );
-
-        if (!user) {
-          throw new NotFoundException('User not found');
+        const currentUser = users.find((u) => u.id === currentUserId);
+        if (!currentUser) {
+          throw new ForbiddenException('You are not in this workspace');
         }
 
-        if (!isInWorkspace) {
-          throw new NotFoundException('User not found in the workspace');
+        const targetUser = users.find((u) => u.id === userId);
+        if (!targetUser) {
+          const userExists = await this.userRepo.findOne({
+            where: { id: userId },
+            select: { id: true },
+          });
+
+          if (!userExists) {
+            throw new NotFoundException('User does not exist');
+          }
+
+          throw new BadRequestException('User is not in this workspace');
         }
 
-        const DMChannel = user.userChannels.find(
-          (userChannel) =>
-            userChannel.channel.name ===
-            `DM_${currentUserId}_${userId}_${workspaceId}`,
-        );
+        const channelName = `DM_${currentUserId}_${userId}`;
+        const DMChannel = targetUser.userChannels.find(
+          (uc) => uc.channel.name === channelName,
+        )?.channel;
 
         if (!DMChannel) {
           if (!workspaceId) {
             throw new NotFoundException('workspaceId not found');
           }
 
-          const channel = await this.channelsService.create(
-            {
-              workspaceId: workspaceId,
-              name: `DM_${currentUserId}_${userId}_${workspaceId}`,
-              topic: `DM`,
-              description: `DM`,
-              is_dm: true,
-            },
-            req,
-          );
+          const newChannel = this.channelsRepo.create({
+            name: `DM_${currentUserId}_${userId}`,
+            topic: 'DM',
+            description: 'DM',
+            is_dm: true,
+            workspace: { id: workspaceId },
+            created_by: { id: currentUserId },
+            userChannels: [
+              {
+                user: { id: currentUserId },
+                role: ChannelRole.ADMIN,
+              },
+            ],
+          });
 
-          messageDto.channelId = channel.channel.id;
+          const savedChannel = await this.channelsRepo.save(newChannel);
+
+          messageDto.channelId = savedChannel.id;
 
           await this.channelsService.addUser(
             {
@@ -195,10 +217,10 @@ export class MessageService {
             true,
           );
         } else {
-          messageDto.channelId = DMChannel.channel.id;
+          messageDto.channelId = DMChannel.id;
         }
 
-        const message = this.createMessageTransaction(
+        const message = await this.createMessageTransaction(
           messageDto,
           currentUserId,
         );
@@ -431,7 +453,7 @@ export class MessageService {
         .orderBy('message.created_at', 'ASC')
         .getMany();
 
-      if (messages.length === 0) {
+      if (!messages || messages.length === 0) {
         throw new NotFoundException('No matching messages found.');
       }
 

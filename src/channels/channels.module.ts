@@ -8,10 +8,17 @@ import { WorkspaceModule } from 'src/workspace/workspace.module';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { Attachment } from 'src/attachment/entities/attachment.entity';
 import { MinioClientModule } from 'src/minio-client/minio-client.module';
+import { User } from 'src/user/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Channels, UserChannel, Workspace, Attachment]),
+    TypeOrmModule.forFeature([
+      Channels,
+      UserChannel,
+      Workspace,
+      Attachment,
+      User,
+    ]),
     WorkspaceModule,
     MinioClientModule,
   ],

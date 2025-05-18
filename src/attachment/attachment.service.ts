@@ -33,7 +33,7 @@ export class AttachmentService {
     createAttachmentDto: CreateAttachmentDto,
     req: Request,
   ) {
-    const { channelId, title, type } = createAttachmentDto;
+    const { channelId, type } = createAttachmentDto;
 
     const userReq = getUserFromRequest(req);
     const userId = userReq?.userId;
@@ -52,7 +52,7 @@ export class AttachmentService {
 
       const message = await this.messageRepository.save({
         channel: { id: channelId },
-        content: title,
+        content: file.originalname,
       });
 
       const uploadedFile = await this.minioClientService.upload(
@@ -63,7 +63,7 @@ export class AttachmentService {
       );
 
       const attachment = this.attachmentRepository.create({
-        title,
+        title: file.originalname,
         type,
         size: this.bytesToMB(file.size),
         url: uploadedFile.url,

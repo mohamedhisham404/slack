@@ -13,6 +13,7 @@ import { plainToInstance } from 'class-transformer';
 import { getUserFromRequest } from 'src/utils/get-user';
 import { UserWorkspace } from 'src/workspace/entities/user-workspace.entity';
 import { UserChannel } from 'src/channels/entities/user-channel.entity';
+import { MinioClientService } from 'src/minio-client/minio-client.service';
 
 @Injectable()
 export class UserService {
@@ -25,6 +26,8 @@ export class UserService {
 
     @InjectRepository(UserWorkspace)
     private readonly usersWorkspaceRepository: Repository<UserWorkspace>,
+
+    private minioClientService: MinioClientService,
   ) {}
   async findAllUsersInChannel(channelId: string, req: Request) {
     try {
@@ -56,7 +59,7 @@ export class UserService {
         },
       });
 
-      if (channel.length === 0) {
+      if (!channel || channel.length === 0) {
         throw new NotFoundException('Channel not found');
       }
 
@@ -104,7 +107,7 @@ export class UserService {
         },
       });
 
-      if (workspace.length === 0) {
+      if (!workspace || workspace.length === 0) {
         throw new NotFoundException('Workspace not found');
       }
 
@@ -140,6 +143,25 @@ export class UserService {
     try {
       const reqUser = getUserFromRequest(req);
       const currentUserId = reqUser?.userId;
+
+      // if (updateUserDto.profile_photo) {
+      //   const user = await this.userRepository.findOne({
+      //     where: { id: currentUserId },
+      //     select: { profile_photo: true },
+      //   });
+
+      //   if (user && user.profile_photo) {
+      //     const objectName = user.profile_photo.split('/').pop();
+
+      //     if (!objectName) {
+      //       throw new BadRequestException('Invalid profile photo URL');
+      //     }
+
+      //     await this.minioClientService.delete(objectName, 'profile-pictures');
+      //   }
+
+      //   await this.minioClientService.upload()
+      // }
 
       const result = await this.userRepository
         .createQueryBuilder()

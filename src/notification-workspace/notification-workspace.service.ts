@@ -33,6 +33,7 @@ export class NotificationWorkspaceService {
       const workspace = await this.workspaceRepository.findOne({
         where: {
           id: workspaceId,
+          userWorkspaces: { user: { id: userId } },
         },
         relations: {
           userWorkspaces: {
@@ -56,11 +57,10 @@ export class NotificationWorkspaceService {
         throw new NotFoundException('Workspace not found');
       }
 
-      const userWorkspace = workspace.userWorkspaces?.find(
-        (uw) => uw.user.id === userId,
+      const isMember = workspace.userWorkspaces.some(
+        (userWorkspace) => userWorkspace.user.id === userId,
       );
-
-      if (!userWorkspace) {
+      if (!isMember) {
         throw new ForbiddenException('You are not a member of this workspace');
       }
 
@@ -78,6 +78,13 @@ export class NotificationWorkspaceService {
     try {
       const userReq = getUserFromRequest(req);
       const userId = userReq?.userId;
+      const { end_time, start_time } = updateNotificationWorkspaceDto;
+
+      if (end_time && start_time && end_time <= start_time) {
+        throw new ForbiddenException(
+          'End time must be greater than start time',
+        );
+      }
 
       if (!userId) {
         throw new ForbiddenException('User not found');
@@ -91,8 +98,8 @@ export class NotificationWorkspaceService {
         .set({
           ...updateNotificationWorkspaceDto,
         })
-        .where('workspaceId = :workspaceId', { workspaceId })
-        .andWhere('userId = :userId', { userId })
+        .where('workspace_id = :workspaceId', { workspaceId })
+        .andWhere('user_id = :userId', { userId })
         .returning('*')
         .execute();
 

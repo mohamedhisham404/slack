@@ -158,46 +158,65 @@ export class WorkspaceService {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (currentUserId === userId) {
-        throw new BadRequestException(
-          'You cannot add yourself to the workspace',
-        );
-      }
-
-      if (!workspaceId || !currentUserId) {
-        throw new BadRequestException('Workspace ID and User ID are required');
-      }
-
-      const currentworkspace = await this.checkWorkspace(
-        workspaceId,
-        currentUserId,
-      );
-
-      const userExists = await this.userRepo.findOne({
-        where: {
-          id: userId,
-        },
+      const currentworkspace = await this.workSpaceRepo.findOne({
+        where: [
+          { id: workspaceId, userWorkspaces: { user: { id: currentUserId } } },
+          { id: workspaceId, userWorkspaces: { user: { id: userId } } },
+        ],
         relations: {
           userWorkspaces: {
-            workspace: true,
+            user: true,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          created_at: true,
+          updated_at: true,
+          userWorkspaces: {
+            id: true,
+            role: true,
+            user: {
+              id: true,
+            },
           },
         },
       });
 
-      if (!userExists) {
-        throw new NotFoundException('User not found');
+      if (!currentworkspace) {
+        throw new NotFoundException('Workspace not found');
       }
 
-      const userInWorkspace = userExists.userWorkspaces.find(
-        (uw) => uw.workspace.id === workspaceId,
+      const currentUser = currentworkspace.userWorkspaces.find(
+        (userWorkspace) => userWorkspace.user.id === currentUserId,
       );
-      if (userInWorkspace) {
+      if (!currentUser) {
+        throw new NotFoundException('You are not a member of this workspace');
+      } else if (currentUserId === userId && currentUser) {
+        throw new BadRequestException(
+          'You are a member of this workspace already',
+        );
+      }
+
+      const addedUser = currentworkspace.userWorkspaces.find(
+        (userWorkspace) => userWorkspace.user.id === userId,
+      );
+      if (!addedUser) {
+        const user = await this.userRepo.findOne({
+          where: { id: userId },
+          select: { id: true },
+        });
+
+        if (!user) {
+          throw new NotFoundException('User does not exist');
+        }
+      } else {
         throw new ConflictException('User already exists in this workspace');
       }
 
       if (
         role === workspaceRole.ADMIN &&
-        currentworkspace.userWorkspace.role !== workspaceRole.ADMIN
+        currentUser.role !== workspaceRole.ADMIN
       ) {
         throw new BadRequestException(
           'You are not allowed to add someone as admin',
@@ -205,20 +224,13 @@ export class WorkspaceService {
       }
 
       await this.dataSource.transaction(async (manager) => {
-        const [, generalChannel] = await Promise.all([
-          manager.insert(UserWorkspace, {
-            user: { id: userId },
+        const generalChannel = await manager.findOne(Channels, {
+          where: {
+            name: 'general',
             workspace: { id: workspaceId },
-            role: role,
-          }),
-          manager.findOne(Channels, {
-            where: {
-              name: 'general',
-              workspace: { id: workspaceId },
-            },
-            select: ['id'],
-          }),
-        ]);
+          },
+          select: ['id'],
+        });
 
         if (!generalChannel) {
           throw new NotFoundException(
@@ -226,7 +238,13 @@ export class WorkspaceService {
           );
         }
 
-        await manager.insert(UserChannel, {
+        const userWorkspace = manager.create(UserWorkspace, {
+          user: { id: userId },
+          workspace: { id: workspaceId },
+          role: role,
+        });
+
+        const userChannel = manager.create(UserChannel, {
           user: { id: userId },
           channel: { id: generalChannel.id },
           role:
@@ -235,10 +253,12 @@ export class WorkspaceService {
               : ChannelRole.MEMBER,
         });
 
-        await manager.insert(NotificationWorkspace, {
+        const notificationWorkspace = manager.create(NotificationWorkspace, {
           user: { id: userId },
           workspace: { id: workspaceId },
         });
+
+        await manager.save([userWorkspace, userChannel, notificationWorkspace]);
       });
 
       return {
@@ -256,15 +276,45 @@ export class WorkspaceService {
       const userReq = getUserFromRequest(req);
       const userId = userReq?.userId;
 
-      if (!workspaceId || !userId) {
-        throw new BadRequestException('Workspace ID and User ID are required');
+      const workspace = await this.workSpaceRepo.findOne({
+        where: {
+          id: workspaceId,
+        },
+        relations: {
+          userWorkspaces: {
+            user: true,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          created_at: true,
+          updated_at: true,
+          userWorkspaces: {
+            id: true,
+            role: true,
+            user: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!workspace) {
+        throw new NotFoundException('Workspace not found');
       }
 
-      const workspace = await this.checkWorkspace(workspaceId, userId);
+      const userWorkspace = workspace.userWorkspaces?.find(
+        (uw) => uw.user.id === userId,
+      );
 
-      return {
-        workspace,
-      };
+      if (!userWorkspace) {
+        throw new ForbiddenException('user not a member of this workspace');
+      }
+
+      return workspace;
     } catch (error) {
       handleError(error);
     }
@@ -296,6 +346,7 @@ export class WorkspaceService {
     req: Request,
   ) {
     try {
+      const { name } = updateWorkspaceDto;
       const userReq = getUserFromRequest(req);
       const userId = userReq?.userId;
 
@@ -315,7 +366,7 @@ export class WorkspaceService {
         .createQueryBuilder()
         .update(Workspace)
         .set({
-          name: updateWorkspaceDto.name,
+          name: name,
         })
         .where('id = :id', { id: workspaceId })
         .returning('*')
@@ -366,7 +417,10 @@ export class WorkspaceService {
         throw new NotFoundException('user is not a member of this workspace');
       }
 
-      if (existingUser.role !== workspaceRole.ADMIN) {
+      if (
+        existingUser.role !== workspaceRole.ADMIN &&
+        userId !== currentUserId
+      ) {
         throw new BadRequestException(
           'You are not allowed to remove a user from this workspace',
         );

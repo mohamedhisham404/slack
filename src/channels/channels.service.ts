@@ -19,6 +19,7 @@ import { workspaceRole } from 'src/workspace/enums/workspace-role.enum';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { MinioClientService } from 'src/minio-client/minio-client.service';
 import { Attachment } from 'src/attachment/entities/attachment.entity';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class ChannelsService {
@@ -34,6 +35,9 @@ export class ChannelsService {
 
     @InjectRepository(Attachment)
     private readonly attachmentRepo: Repository<Attachment>,
+
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
 
     private minioClientService: MinioClientService,
 
@@ -112,10 +116,11 @@ export class ChannelsService {
     try {
       const userReq = getUserFromRequest(req);
       const userId = userReq?.userId;
+      const { workspaceId, name } = createChannelDto;
 
       const workspace = await this.workspaceRepo.findOne({
         where: {
-          id: createChannelDto.workspaceId,
+          id: workspaceId,
         },
         relations: {
           userWorkspaces: {
@@ -124,6 +129,7 @@ export class ChannelsService {
           channels: true,
         },
         select: {
+          id: true,
           userWorkspaces: {
             user: { id: true },
             role: true,
@@ -133,26 +139,31 @@ export class ChannelsService {
           },
         },
       });
-
       if (!workspace) {
         throw new NotFoundException('Workspace not found');
       }
 
-      const existingUser = workspace.userWorkspaces.find(
-        (user) => user.user.id === userId,
+      const isMember = workspace.userWorkspaces.some(
+        (uw) => uw.user.id === userId,
       );
-      if (!existingUser) {
+      if (!isMember) {
         throw new NotFoundException('You are not a member of this workspace');
       }
 
-      if (existingUser.role !== workspaceRole.ADMIN) {
+      const currentUser = workspace.userWorkspaces.find(
+        (uw) => uw.user.id === userId,
+      );
+      if (!currentUser) {
+        throw new NotFoundException('You are not a member of this workspace');
+      }
+      if (currentUser.role !== workspaceRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to create a channel in this workspace',
         );
       }
 
       const existingChannel = workspace.channels.find(
-        (channel) => channel.name === createChannelDto.name,
+        (channel) => channel.name.toLowerCase() === name.toLowerCase(),
       );
       if (existingChannel) {
         throw new BadRequestException('Channel name already exists');
@@ -162,7 +173,7 @@ export class ChannelsService {
         const channel = manager.create(Channels, {
           ...createChannelDto,
           created_by: { id: userId },
-          workspace: { id: createChannelDto.workspaceId },
+          workspace: { id: workspaceId },
           userChannels: [
             {
               user: { id: userId },
@@ -193,22 +204,15 @@ export class ChannelsService {
     }
   }
 
-  async addUser(addUser: AddUserDto, req: Request, isDmFromMessage = false) {
+  async addUser(addUserDto: AddUserDto, req: Request, isDMFromMessage = false) {
     try {
-      const { channelId, userId, role } = addUser;
+      const { channelId, userId, role } = addUserDto;
 
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (!channelId || !currentUserId) {
-        throw new BadRequestException('Channel ID and User ID are required');
-      }
-
       const currentChannel = await this.channelRepo.findOne({
-        where: [
-          { id: channelId, userChannels: { user: { id: currentUserId } } },
-          { id: channelId, userChannels: { user: { id: userId } } },
-        ],
+        where: { id: channelId, userChannels: { user: { id: currentUserId } } },
         relations: {
           userChannels: { user: true },
           workspace: { userWorkspaces: { user: true } },
@@ -237,8 +241,7 @@ export class ChannelsService {
 
       if (
         currentUserId === userId &&
-        !isDmFromMessage &&
-        currentChannel.is_private
+        (currentChannel.is_private || isDMFromMessage === false)
       ) {
         throw new BadRequestException('You cannot add yourself to the channel');
       }
@@ -261,7 +264,7 @@ export class ChannelsService {
 
       if (currentChannel?.is_private && role === ChannelRole.MEMBER) {
         throw new BadRequestException(
-          'You are not allowed to add someone as member to a private channel',
+          'You are not allowed to add someone to a private channel',
         );
       }
 
@@ -269,6 +272,13 @@ export class ChannelsService {
         (uw) => uw.user.id === userId,
       );
       if (!addedUserWorkspace) {
+        const user = await this.userRepo.findOne({
+          where: { id: userId },
+          select: { id: true },
+        });
+        if (!user) {
+          throw new NotFoundException('User not found');
+        }
         throw new NotFoundException('User not found in this workspace');
       }
 
@@ -386,6 +396,10 @@ export class ChannelsService {
         },
       });
 
+      if (!channels || channels.length === 0) {
+        throw new NotFoundException('this workspace has no channels');
+      }
+
       const workspace = channels[0]?.workspace;
 
       if (!workspace) {
@@ -397,11 +411,7 @@ export class ChannelsService {
       );
 
       if (!userInWorkspace) {
-        throw new BadRequestException('User is not a member of this workspace');
-      }
-
-      if (!channels || channels.length === 0) {
-        throw new NotFoundException('this workspace has no channels');
+        throw new BadRequestException('You are not a member of this workspace');
       }
 
       return {
@@ -419,47 +429,60 @@ export class ChannelsService {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (!currentUserId) {
-        throw new BadRequestException('Workspace ID is required');
-      }
-
       const channel = await this.channelRepo.findOne({
-        where: { id: channelId },
+        where: {
+          id: channelId,
+        },
         relations: {
           workspace: {
             userWorkspaces: {
               user: true,
             },
           },
-        },
-        select: {
-          workspace: {
-            id: true,
-            userWorkspaces: {
-              user: { id: true },
-            },
+          userChannels: {
+            user: true,
           },
         },
       });
 
-      if (!channel?.workspace) {
+      if (!channel) {
+        throw new NotFoundException('Channel not found');
+      }
+
+      if (!channel.workspace) {
         throw new NotFoundException('Workspace not found');
       }
 
-      const userInWorkspace = channel.workspace.userWorkspaces.some(
+      const userInWorkspace = channel.workspace.userWorkspaces.find(
         (uw) => uw.user.id === currentUserId,
       );
-
       if (!userInWorkspace) {
-        throw new BadRequestException('User is not a member of this workspace');
+        throw new BadRequestException('You are not a member of this workspace');
       }
 
-      const channelChecked = await this.checkTheChannel(
-        channelId,
-        currentUserId,
+      const userChannel = channel.userChannels.find(
+        (uc) => uc.user.id === currentUserId,
       );
+      if (!userChannel) {
+        throw new NotFoundException('You are not a member of this channel');
+      }
 
-      return channelChecked;
+      return {
+        id: channel.id,
+        name: channel.name,
+        topic: channel.topic,
+        description: channel.description,
+        is_private: channel.is_private,
+        is_dm: channel.is_dm,
+        admin_only: channel.admin_only,
+        created_by: channel.created_by,
+        workspaceId: channel.workspace.id,
+        members: channel.userChannels.map((uc) => ({
+          id: uc.user.id,
+          name: uc.user.name,
+          role: uc.role,
+        })),
+      };
     } catch (error) {
       handleError(error);
     }
@@ -590,7 +613,7 @@ export class ChannelsService {
         );
       }
 
-      if (channel.is_general && updateChannelDto.is_general) {
+      if (channel.is_general) {
         throw new BadRequestException('You cannot update the general channel');
       }
 
@@ -617,12 +640,6 @@ export class ChannelsService {
       const userReq = getUserFromRequest(req);
       const currentUserId = userReq?.userId;
 
-      if (userId === currentUserId) {
-        throw new BadRequestException(
-          'You cannot remove yourself from the channel',
-        );
-      }
-
       if (!channelId || !currentUserId) {
         throw new BadRequestException('Workspace ID and User ID are required');
       }
@@ -635,7 +652,10 @@ export class ChannelsService {
         );
       }
 
-      if (channel.userChannel.role !== ChannelRole.ADMIN) {
+      if (
+        channel.userChannel.role !== ChannelRole.ADMIN &&
+        userId !== currentUserId
+      ) {
         throw new BadRequestException(
           'You are not allowed to remove a user from this channel',
         );
@@ -699,13 +719,9 @@ export class ChannelsService {
         await this.minioClientService.delete(objectName, attachment.type);
       }
 
-      const result = await this.channelRepo.delete({
+      await this.channelRepo.delete({
         id: channelId,
       });
-
-      if (result.affected === 0) {
-        throw new NotFoundException('Channel not found');
-      }
 
       return {
         message: 'Channel removed successfully',
