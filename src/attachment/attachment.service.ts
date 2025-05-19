@@ -34,7 +34,6 @@ export class AttachmentService {
     req: Request,
   ) {
     const { channelId, type } = createAttachmentDto;
-
     const userReq = getUserFromRequest(req);
     const userId = userReq?.userId;
 
@@ -43,6 +42,9 @@ export class AttachmentService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
+    let uploadedFileUrl: string | null = null;
+    let objectName: string | null = null;
+
     try {
       if (!userId) {
         throw new NotFoundException('User not found');
@@ -50,10 +52,12 @@ export class AttachmentService {
 
       await this.channelsService.checkTheChannel(channelId, userId);
 
-      const message = await this.messageRepository.save({
-        channel: { id: channelId },
-        content: file.originalname,
-      });
+      const message = await queryRunner.manager.save(
+        this.messageRepository.create({
+          channel: { id: channelId },
+          content: file.originalname,
+        }),
+      );
 
       const uploadedFile = await this.minioClientService.upload(
         file.buffer,
@@ -62,21 +66,27 @@ export class AttachmentService {
         type,
       );
 
+      uploadedFileUrl = uploadedFile.url;
+      objectName = uploadedFileUrl.split('/').pop() ?? null;
+
       const attachment = this.attachmentRepository.create({
         title: file.originalname,
         type,
         size: this.bytesToMB(file.size),
-        url: uploadedFile.url,
+        url: uploadedFileUrl,
         message,
       });
 
-      const result = await this.attachmentRepository.save(attachment);
+      const result = await queryRunner.manager.save(attachment);
 
       await queryRunner.commitTransaction();
-
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
+
+      if (objectName) {
+        await this.minioClientService.delete(objectName, type);
+      }
 
       handleError(error);
     } finally {

@@ -159,10 +159,7 @@ export class WorkspaceService {
       const currentUserId = userReq?.userId;
 
       const currentworkspace = await this.workSpaceRepo.findOne({
-        where: [
-          { id: workspaceId, userWorkspaces: { user: { id: currentUserId } } },
-          { id: workspaceId, userWorkspaces: { user: { id: userId } } },
-        ],
+        where: { id: workspaceId },
         relations: {
           userWorkspaces: {
             user: true,

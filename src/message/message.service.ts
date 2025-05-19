@@ -443,6 +443,7 @@ export class MessageService {
         );
       }
 
+      // really bad way to do this
       const messages = await this.messageRepo
         .createQueryBuilder('message')
         .leftJoinAndSelect('message.user', 'user')

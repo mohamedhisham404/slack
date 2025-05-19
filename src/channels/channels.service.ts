@@ -50,6 +50,7 @@ export class ChannelsService {
     const channel = await this.channelRepo.findOne({
       where: {
         id: channelId,
+        userChannels: { user: { id: userId } },
       },
       relations: {
         userChannels: {
@@ -118,27 +119,13 @@ export class ChannelsService {
       const userId = userReq?.userId;
       const { workspaceId, name } = createChannelDto;
 
-      const workspace = await this.workspaceRepo.findOne({
-        where: {
-          id: workspaceId,
-        },
-        relations: {
-          userWorkspaces: {
-            user: true,
-          },
-          channels: true,
-        },
-        select: {
-          id: true,
-          userWorkspaces: {
-            user: { id: true },
-            role: true,
-          },
-          channels: {
-            name: true,
-          },
-        },
-      });
+      const workspace = await this.workspaceRepo
+        .createQueryBuilder('workspace')
+        .leftJoinAndSelect('workspace.userWorkspaces', 'userWorkspace')
+        .leftJoinAndSelect('userWorkspace.user', 'user')
+        .leftJoinAndSelect('workspace.channels', 'channel')
+        .where('workspace.id = :workspaceId', { workspaceId })
+        .getOne();
       if (!workspace) {
         throw new NotFoundException('Workspace not found');
       }
@@ -277,7 +264,7 @@ export class ChannelsService {
           select: { id: true },
         });
         if (!user) {
-          throw new NotFoundException('User not found');
+          throw new NotFoundException('User does not exist');
         }
         throw new NotFoundException('User not found in this workspace');
       }
@@ -616,6 +603,9 @@ export class ChannelsService {
       if (channel.is_general) {
         throw new BadRequestException('You cannot update the general channel');
       }
+      if (channel.is_dm) {
+        throw new BadRequestException('You cannot update a DM channel');
+      }
 
       const result = await this.channelRepo
         .createQueryBuilder()
@@ -649,6 +639,12 @@ export class ChannelsService {
       if (channel.is_dm) {
         throw new BadRequestException(
           'You cannot remove a user from a DM channel',
+        );
+      }
+
+      if (channel.is_general) {
+        throw new BadRequestException(
+          'You cannot remove a user from the general channel',
         );
       }
 
@@ -691,15 +687,13 @@ export class ChannelsService {
 
       const channel = await this.checkTheChannel(channelId, currentUserId);
 
+      if (channel.is_dm) {
+        throw new BadRequestException('You cannot remove a DM channel');
+      }
+
       if (channel.userChannel.role !== ChannelRole.ADMIN) {
         throw new BadRequestException(
           'You are not allowed to remove this channel',
-        );
-      }
-
-      if (channel.is_general) {
-        throw new BadRequestException(
-          'You cannot remove a user from the general channel',
         );
       }
 

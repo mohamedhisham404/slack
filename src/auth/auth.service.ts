@@ -98,11 +98,15 @@ export class AuthService {
       });
 
       if (!user) {
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
         throw new UnauthorizedException('Email or password is incorrect');
       }
 
       const passwordMatch = await bcrypt.compare(password, user.password);
       if (!passwordMatch) {
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
         throw new UnauthorizedException('Email or password is incorrect');
       }
 
