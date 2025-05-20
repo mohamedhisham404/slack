@@ -178,9 +178,14 @@ export class MessageService {
           throw new BadRequestException('User is not in this workspace');
         }
 
-        const channelName = `DM_${currentUserId}_${userId}`;
+        const channelName1 = `DM_${currentUserId}_${userId}`;
+        const channelName2 = `DM_${userId}_${currentUserId}`;
+
         const DMChannel = targetUser.userChannels.find(
-          (uc) => uc.channel.name === channelName,
+          (uc) =>
+            uc.channel.is_dm &&
+            (uc.channel.name === channelName1 ||
+              uc.channel.name === channelName2),
         )?.channel;
 
         if (!DMChannel) {
@@ -251,6 +256,7 @@ export class MessageService {
       const safePage = Math.max(page, 1);
       const skip = (safePage - 1) * safeLimit;
 
+      //very slow way to do it
       const [messages, total] = await this.messageRepo
         .createQueryBuilder('message')
         .leftJoinAndSelect('message.user', 'user')

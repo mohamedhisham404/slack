@@ -7,7 +7,5 @@ export class CreateChannelsDto {
   @IsOptional() @IsString() topic?: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsBoolean() is_private?: boolean;
-  @IsOptional() @IsBoolean() is_dm?: boolean;
-  @IsOptional() @IsBoolean() is_general?: boolean;
   @IsOptional() @IsBoolean() admin_only?: boolean;
 }
