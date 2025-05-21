@@ -52,13 +52,6 @@ export class AttachmentService {
 
       await this.channelsService.checkTheChannel(channelId, userId);
 
-      const message = await queryRunner.manager.save(
-        this.messageRepository.create({
-          channel: { id: channelId },
-          content: file.originalname,
-        }),
-      );
-
       const uploadedFile = await this.minioClientService.upload(
         file.buffer,
         file.originalname,
@@ -74,7 +67,10 @@ export class AttachmentService {
         type,
         size: this.bytesToMB(file.size),
         url: uploadedFileUrl,
-        message,
+        message: {
+          channel: { id: channelId },
+          content: file.originalname,
+        },
       });
 
       const result = await queryRunner.manager.save(attachment);
